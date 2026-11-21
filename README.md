@@ -67,6 +67,12 @@ load, or you can start from the included placeholder:
 cp data/example.json data/default.json
 ```
 
+Both `dev` and `start` bind to `127.0.0.1` on purpose. The API reads and writes
+the files under `data/` and has no authentication, because it is meant for one
+person on one machine. Bound to every interface, anyone on the same network
+could read and overwrite the resume. If you do want it reachable from another
+device, pass the host explicitly: `npm run dev -- -H 0.0.0.0`.
+
 ## Your resume stays out of git
 
 `data/*.json` is gitignored, with `data/example.json` as the only exception.
