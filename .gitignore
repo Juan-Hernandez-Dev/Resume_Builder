@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# variant write artifacts: the rolling backup an atomic write leaves next to a
+# variant, and an in-progress write that a crash did not clean up
+/data/*.bak
+/data/*.tmp
+
+# Resume content is personal data: real names, phone numbers and email
+# addresses. The app seeds its own variant on a fresh clone (see
+# ensureFirstVariant in lib/variants.ts), so nothing here needs to be
+# committed. example.json is the one exception: placeholder content only.
+/data/*.json
+!/data/example.json
+
+# local tooling state, not part of the project
+/.atl/
+/.codegraph/

@@ -1,0 +1,167 @@
+{
+  "header": {
+    "name": "John Doe",
+    "location": "Austin, TX",
+    "links": [
+      {
+        "label": "LinkedIn",
+        "url": "https://www.linkedin.com/in/johndoe"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/johndoe"
+      }
+    ],
+    "phone": "+1 (555) 010-4477",
+    "email": "john.doe@example.com"
+  },
+  "sections": [
+    {
+      "id": "section-experience",
+      "title": "Professional experience",
+      "visible": true,
+      "type": "entries",
+      "entries": [
+        {
+          "id": "entry-example-meridian",
+          "visible": true,
+          "org": "Meridian Logistics",
+          "location": "Austin, TX",
+          "role": "Senior Software Engineer",
+          "period": "2022 - Present",
+          "bullets": [
+            "Cut median checkout latency from 1.4s to 380ms by batching the queries behind the cart, lifting conversion 6%.",
+            "Led the move of 40 services off a shared database onto per-service schemas with no downtime.",
+            "Introduced contract tests across team boundaries, halving integration failures caught in staging.",
+            "Mentored three junior engineers; two now own services of their own."
+          ]
+        },
+        {
+          "id": "entry-example-harbor",
+          "visible": true,
+          "org": "Harbor Point Systems",
+          "location": "Remote",
+          "role": "Software Engineer",
+          "period": "2019 - 2022",
+          "bullets": [
+            "Built the billing pipeline behind 2M invoices a month, with idempotent retries and nightly reconciliation.",
+            "Rewrote the alert rules and on-call runbook, taking pages from 23 a week down to 4.",
+            "Replaced a nightly CSV export with a streaming API, removing the batch window entirely."
+          ]
+        },
+        {
+          "id": "entry-example-bluefin",
+          "visible": true,
+          "org": "Bluefin Labs",
+          "location": "Austin, TX",
+          "role": "Junior Developer",
+          "period": "2018 - 2019",
+          "bullets": [
+            "Shipped the public status page and the incident timeline behind it."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "section-achievements",
+      "title": "Achievements",
+      "visible": true,
+      "type": "achievements",
+      "entries": [
+        {
+          "id": "entry-example-hackathon",
+          "visible": true,
+          "title": "Meridian Internal Hackathon",
+          "location": "Austin, TX",
+          "description": "1st Place, Company-wide: prototyped the self-serve refund flow, which shipped to production the following quarter.",
+          "year": "2023"
+        },
+        {
+          "id": "entry-example-opensource",
+          "visible": true,
+          "title": "Open Source Maintainer",
+          "location": "Remote",
+          "description": "Maintainer of a query-batching library used by 4,000 projects; reviewed and shipped 120 community pull requests.",
+          "year": "2021"
+        }
+      ]
+    },
+    {
+      "id": "section-education",
+      "title": "Education",
+      "visible": true,
+      "type": "entries",
+      "entries": [
+        {
+          "id": "entry-example-university",
+          "visible": true,
+          "org": "State University",
+          "location": "Austin, TX",
+          "role": "BSc Computer Science",
+          "period": "2014 - 2018",
+          "bullets": []
+        }
+      ]
+    },
+    {
+      "id": "section-technical-skills",
+      "title": "Technical skills",
+      "visible": true,
+      "type": "skills",
+      "entries": [
+        {
+          "id": "entry-example-skills-languages",
+          "visible": true,
+          "label": "Languages",
+          "items": ["TypeScript", "Python", "Go", "SQL"]
+        },
+        {
+          "id": "entry-example-skills-backend",
+          "visible": true,
+          "label": "Backend & Data",
+          "items": ["Node.js", "PostgreSQL", "Redis", "gRPC", "Kafka"]
+        },
+        {
+          "id": "entry-example-skills-frontend",
+          "visible": true,
+          "label": "Frontend",
+          "items": ["React.js", "Next.js", "Tailwind CSS"]
+        },
+        {
+          "id": "entry-example-skills-infra",
+          "visible": true,
+          "label": "Infrastructure",
+          "items": ["AWS", "Docker", "Kubernetes", "Terraform"]
+        },
+        {
+          "id": "entry-example-skills-practices",
+          "visible": true,
+          "label": "Practices",
+          "items": ["TDD", "CI/CD", "Observability", "Code review"]
+        }
+      ]
+    },
+    {
+      "id": "section-related-skills",
+      "title": "Related skills",
+      "visible": true,
+      "type": "certifications",
+      "entries": [
+        {
+          "id": "entry-example-certification",
+          "visible": true,
+          "name": "AWS Certified Solutions Architect, Associate",
+          "issuer": "Issued by Amazon Web Services",
+          "detail": "Credential ID EXAMPLE-0000",
+          "date": "Mar. 14, 2023",
+          "linkLabel": "Digital Certificate",
+          "url": "https://example.com/certificate"
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "pageSize": "letter",
+    "dateSeparator": "hyphen"
+  }
+}
