@@ -1,0 +1,138 @@
+/* ==========================================================================
+   Print / PDF rules.
+
+   @page cannot read custom properties, so both sheet sizes are declared as
+   named pages and the Letter/A4 toggle picks one through the `page` property
+   on the resume page box.
+   ========================================================================== */
+
+@page {
+  size: letter;
+  margin: 0;
+}
+
+@page resume-letter {
+  size: letter;
+  margin: 0;
+}
+
+@page resume-a4 {
+  size: A4;
+  margin: 0;
+}
+
+.resume-page[data-page-size="letter"] {
+  page: resume-letter;
+}
+
+.resume-page[data-page-size="a4"] {
+  page: resume-a4;
+}
+
+@media print {
+  html,
+  body {
+    width: auto;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  /* Anything that is app chrome rather than the resume itself opts out of
+     printing with one of these hooks (editor panel, toolbars, tabs...). */
+  .no-print,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  /* The backdrop, the two panes and the scaler all collapse so only the page
+     is left. The editor shell is a full-height flex layout with its own
+     scroll containers on screen; every one of those has to be undone or the
+     page is clipped to the pane it was scrolling in. */
+  .app-shell,
+  .app-panes,
+  .preview-pane,
+  .preview-pane__body {
+    display: block !important;
+    flex: none !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: #fff !important;
+  }
+
+  /* Printable from the Plain text tab too: the page is parked off screen
+     there, never unmounted, so it has to come back into flow for print or the
+     sheet comes out blank. */
+  .preview-panel--offscreen {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+  }
+
+  /* Nothing may print after the resume page. It is a named page (see the
+     `page` declarations above), so a following box forces a page break and
+     Chrome emits a blank extra sheet. Every sibling of the page therefore
+     needs `.no-print` or `data-print-hide`, including empty wrappers. */
+
+  .resume-scaler,
+  .resume-scaler__frame {
+    display: block;
+    width: auto;
+    max-width: none;
+    overflow: visible;
+    /* The frame carries an inline height while scaled on screen. */
+    height: auto !important;
+  }
+
+  .resume-scaler__page {
+    width: auto;
+    /* Never print a scaled page: the sheet is already the right size. */
+    transform: none !important;
+  }
+
+  .resume-page {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    box-shadow: none;
+  }
+
+  /* Editing in place is allowed to add things the document does not have: an
+     element for a field that is still empty, the separator that would have
+     gone with it, and the hover toolbar. All of it comes back out here, so a
+     PDF printed with "Edit on page" on is the same PDF as with it off. */
+  [data-inline-empty="true"] {
+    display: none !important;
+  }
+
+  /* Except a cell of the two-column grid. The grid places its children
+     automatically, so removing one would pull every cell after it into the
+     wrong column — an empty location would move the role into the right hand
+     column. An empty cell is already invisible (it has no text, and the rule
+     below takes its placeholder away), so it simply stays where it is. */
+  .resume-grid > [data-inline-empty="true"] {
+    display: inline !important;
+  }
+
+  [data-inline-tools] {
+    display: none !important;
+  }
+
+  [data-inline-edit] {
+    background: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  [data-inline-edit]::before {
+    content: none !important;
+  }
+}

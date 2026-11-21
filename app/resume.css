@@ -1,0 +1,348 @@
+/* ==========================================================================
+   Resume design tokens and layout.
+
+   This is the ONLY file to edit to change how the resume looks. Plain CSS on
+   purpose: no Tailwind utilities are used on the resume itself, so the printed
+   document never depends on the app's styling.
+   ========================================================================== */
+
+:root {
+  /* Change the resume font here. --font-resume-serif is injected by
+     next/font/google in app/layout.tsx; the rest is the fallback stack. */
+  --font-resume-serif-fallback: "Source Serif 4", "Source Serif Pro", Georgia,
+    "Times New Roman", serif;
+  --resume-font-family: var(--font-resume-serif), var(--font-resume-serif-fallback);
+}
+
+.resume-page {
+  /* --- Typography ------------------------------------------------------- */
+  --resume-font-size: 10.5pt;
+  --resume-line-height: 1.25;
+  --resume-name-size: 16pt;
+  /* Tighter than the body: the name is one large line and the body leading
+     would leave a visible gap under it. */
+  --resume-name-line-height: 1.15;
+  --resume-heading-size: 11.5pt;
+  --resume-regular: 400;
+  --resume-bold: 700;
+  --resume-color: #000;
+  --resume-background: #fff;
+
+  /* --- Spacing scale --------------------------------------------------- */
+  /* Every gap between blocks of text comes from these three values. The two
+     optical values further down are the only exceptions, and they say so. */
+  --resume-space-1: 4pt;
+  --resume-space-2: 8pt;
+  --resume-space-3: 12pt;
+
+  /* --- Vertical rhythm, derived from the scale -------------------------- */
+  --resume-section-gap: var(--resume-space-3); /* before every section */
+  --resume-entry-gap: var(--resume-space-2); /* between every entry */
+  --resume-bullets-gap: var(--resume-space-1); /* above the bullet list */
+
+  /* --- The section heading rule (optical, deliberately off the scale) --- */
+  /* These two are set by eye against the 1.5px rule, not by the scale: 8pt
+     below the rule reads as a gap, and 4pt above it crowds the descenders of
+     the heading. Changing the scale does not change them. */
+  --resume-heading-rule-gap: 6pt; /* below the section rule */
+  --resume-heading-rule-offset: 1pt; /* between heading text and rule */
+
+  /* --- Page geometry ---------------------------------------------------- */
+  --resume-page-width: 8.5in;
+  --resume-page-height: 11in;
+  --resume-page-padding: 0.5in;
+
+  /* --- Details ---------------------------------------------------------- */
+  --resume-rule-thickness: 1.5px;
+  --resume-column-gap: var(--resume-space-3);
+  --resume-bullet-indent: 0.3in;
+  --resume-bullet-marker-width: 0.16in;
+  --resume-page-shadow: 0 1px 2px rgba(0, 0, 0, 0.18),
+    0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+.resume-page[data-page-size="a4"] {
+  --resume-page-width: 210mm;
+  --resume-page-height: 297mm;
+}
+
+/* --------------------------------------------------------------------------
+   The page box: real physical size, margins handled by its own padding.
+   -------------------------------------------------------------------------- */
+
+.resume-page {
+  box-sizing: border-box;
+  width: var(--resume-page-width);
+  min-height: var(--resume-page-height);
+  padding: var(--resume-page-padding);
+  background: var(--resume-background);
+  color: var(--resume-color);
+  color-scheme: light;
+  font-family: var(--resume-font-family);
+  font-size: var(--resume-font-size);
+  font-weight: var(--resume-regular);
+  line-height: var(--resume-line-height);
+  text-align: left;
+  box-shadow: var(--resume-page-shadow);
+}
+
+.resume-page *,
+.resume-page *::before,
+.resume-page *::after {
+  box-sizing: border-box;
+}
+
+.resume-page a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   Header: centred name, location line, contact line.
+   -------------------------------------------------------------------------- */
+
+.resume-header {
+  margin: 0;
+  text-align: center;
+}
+
+.resume-header__name {
+  margin: 0;
+  font-size: var(--resume-name-size);
+  font-weight: var(--resume-bold);
+  line-height: var(--resume-name-line-height);
+}
+
+.resume-header__line {
+  margin: var(--resume-space-1) 0 0;
+}
+
+/* --------------------------------------------------------------------------
+   Sections: ruled heading plus one block per entry.
+   -------------------------------------------------------------------------- */
+
+.resume-section {
+  margin: var(--resume-section-gap) 0 0;
+}
+
+.resume-section__title {
+  margin: 0 0 var(--resume-heading-rule-gap);
+  padding: 0 0 var(--resume-heading-rule-offset);
+  border-bottom: var(--resume-rule-thickness) solid var(--resume-color);
+  font-size: var(--resume-heading-size);
+  font-weight: var(--resume-bold);
+  line-height: var(--resume-line-height);
+  text-align: left;
+  break-after: avoid;
+}
+
+/* One class for every entry block, so the gap between entries is identical
+   everywhere and no entry is ever split across two printed pages. */
+.resume-block {
+  break-inside: avoid;
+}
+
+.resume-block + .resume-block {
+  margin-top: var(--resume-entry-gap);
+}
+
+/* Shared two-column grid: content left, date/location right. Normal flow
+   only, no floats and no absolute positioning, so the DOM order an ATS reads
+   is the order the reader sees. */
+.resume-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: var(--resume-column-gap);
+  align-items: baseline;
+}
+
+/* --- "entries" block (experience, education) ---------------------------- */
+
+.resume-entry__org {
+  font-weight: var(--resume-bold);
+}
+
+.resume-entry__location {
+  font-weight: var(--resume-bold);
+  text-align: right;
+}
+
+.resume-entry__role {
+  font-weight: var(--resume-regular);
+}
+
+.resume-entry__period {
+  font-weight: var(--resume-regular);
+  text-align: right;
+}
+
+/* --- Bullets: 0.3in indent with a hanging indent ------------------------ */
+
+.resume-bullets {
+  margin: var(--resume-bullets-gap) 0 0;
+  padding: 0 0 0 var(--resume-bullet-indent);
+  list-style: none;
+}
+
+.resume-bullets__item {
+  padding-left: var(--resume-bullet-marker-width);
+  text-indent: calc(-1 * var(--resume-bullet-marker-width));
+  break-inside: avoid;
+}
+
+.resume-bullets__item::before {
+  content: "\2022";
+  display: inline-block;
+  width: var(--resume-bullet-marker-width);
+  text-indent: 0;
+}
+
+/* --- "achievements" block ----------------------------------------------- */
+
+.resume-achievement__title {
+  font-weight: var(--resume-bold);
+}
+
+.resume-achievement__location {
+  font-weight: var(--resume-bold);
+  text-align: right;
+}
+
+.resume-achievement__description {
+  font-weight: var(--resume-regular);
+}
+
+.resume-achievement__year {
+  font-weight: var(--resume-regular);
+  text-align: right;
+  /* Sit on the last line of the description instead of its first. */
+  align-self: end;
+}
+
+/* --- "skills" block: one line per item, no gap between lines ------------ */
+
+.resume-skills {
+  margin: 0;
+}
+
+.resume-skills__line {
+  margin: 0;
+  break-inside: avoid;
+}
+
+.resume-skills__label {
+  font-weight: var(--resume-bold);
+}
+
+/* --- "certifications" block --------------------------------------------- */
+
+.resume-certification__name {
+  font-weight: var(--resume-bold);
+}
+
+.resume-certification__issuer {
+  font-weight: var(--resume-bold);
+  text-align: right;
+}
+
+.resume-certification__detail {
+  font-weight: var(--resume-regular);
+}
+
+.resume-certification__date {
+  font-weight: var(--resume-regular);
+  text-align: right;
+}
+
+.resume-certification__link {
+  grid-column: 1 / -1;
+  font-weight: var(--resume-regular);
+}
+
+/* --------------------------------------------------------------------------
+   Preview chrome: scales the real-size page down to fit its pane. Not resume
+   design; it only exists because the page is shown inside a smaller pane.
+   -------------------------------------------------------------------------- */
+
+.resume-scaler {
+  width: 100%;
+}
+
+.resume-scaler__frame {
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.resume-scaler__page {
+  flex: 0 0 auto;
+  transform-origin: top center;
+}
+
+/* --------------------------------------------------------------------------
+   Edit-mode chrome: what the page looks like while it is being edited in
+   place. NOT resume design. None of it exists unless `resume-page--editing`
+   is on the page box, and app/print.css removes every bit of it, so the
+   printed document is the same whether editing was on or off.
+
+   The hard rule here is that nothing may change layout. The overflow meter
+   measures the real page height in pixels, so a border, padding, margin or
+   font change on a field would quietly rewrite how long the document is.
+   Only `outline`, `box-shadow` and `background-color` are allowed on a field;
+   the empty-field placeholder is the one deliberate exception, and the hover
+   toolbar is absolutely positioned and therefore out of flow entirely.
+   -------------------------------------------------------------------------- */
+
+.resume-page--editing [data-inline-edit]:hover {
+  background-color: rgba(37, 99, 235, 0.06);
+}
+
+.resume-page--editing [data-inline-edit]:focus {
+  outline: 1px solid rgba(37, 99, 235, 0.5);
+  /* Sits outside the outline, so neither one takes up space. */
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  background-color: rgba(37, 99, 235, 0.04);
+}
+
+/* An empty field has no text to click on, so it shows what belongs in it.
+   This is the one rule that adds content, and it only exists in edit mode. */
+.resume-page--editing [data-inline-edit]:empty::before,
+.resume-page--editing [data-inline-edit][data-inline-empty="true"]::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+}
+
+/* The anchor for the hover toolbar. `position: relative` does not move a
+   statically positioned box, so no block shifts by a pixel. */
+.resume-block,
+.resume-skills__line {
+  position: relative;
+}
+
+/* Stacked in the page's own left margin rather than over the block: the top
+   right corner of every block is where the right hand column lives (location,
+   period, year), and a toolbar there would cover the text it is offering to
+   move. Overflowing the block upwards or downwards costs nothing, because an
+   absolutely positioned box adds no height to the page being measured. */
+.resume-page--editing [data-inline-tools] {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--resume-background);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+  opacity: 0;
+  /* Invisible is not the same as absent: without this, the hidden toolbar
+     would still swallow clicks aimed at the page behind it. */
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.resume-page--editing .resume-block:hover [data-inline-tools],
+.resume-page--editing .resume-skills__line:hover [data-inline-tools],
+.resume-page--editing [data-inline-tools]:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
