@@ -78,6 +78,15 @@ export function ChevronIcon({ open }: { open: boolean }) {
   );
 }
 
+export function LinkIcon() {
+  return (
+    <svg {...base}>
+      <path d="M6.8 9.2a2.6 2.6 0 0 0 3.7 0l2.2-2.2a2.6 2.6 0 0 0-3.7-3.7l-.9.9" />
+      <path d="M9.2 6.8a2.6 2.6 0 0 0-3.7 0L3.3 9a2.6 2.6 0 0 0 3.7 3.7l.9-.9" />
+    </svg>
+  );
+}
+
 export function CopyIcon() {
   return (
     <svg {...base}>
