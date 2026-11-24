@@ -4,7 +4,11 @@
   "description": "A local resume builder with a print-accurate live preview. Content is JSON on disk; the preview renders at real page size so what you see is what the PDF gets.",
   "license": "MIT",
   "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
+    "app": "next build && next start -H 127.0.0.1",
     "dev": "next dev -H 127.0.0.1",
     "build": "next build",
     "start": "next start -H 127.0.0.1",
@@ -19,6 +23,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "next": "16.4.6",
+    "puppeteer-core": "^25.18.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zod": "^4.6.7"

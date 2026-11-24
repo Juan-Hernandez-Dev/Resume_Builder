@@ -6,6 +6,7 @@ import { formatOverflow, type Overflow } from "@/lib/overflow";
 import type { DateSeparator, PageSize } from "@/lib/schema";
 import { sanitizeVariantName, VARIANT_NAME_RULE } from "@/lib/variant-name";
 
+import { PdfExport } from "./PdfExport";
 import { Button } from "./ui/Button";
 import { SegmentedControl } from "./ui/SegmentedControl";
 import { INPUT_CLASS } from "./ui/TextInput";
@@ -116,13 +117,7 @@ export function TopBar({
         onChange={(dateSeparator) => editor.updateSettings({ dateSeparator })}
       />
 
-      <div className="flex items-center gap-2">
-        <Button onClick={() => window.print()}>Export PDF</Button>
-        <span className="max-w-[18rem] text-[11px] leading-tight text-neutral-500">
-          Chrome: Print &gt; Save as PDF, Margins: None, Background graphics
-          off, Headers and footers off.
-        </span>
-      </div>
+      <PdfExport resume={editor.resume} variant={editor.variant} />
 
       <div className="flex items-center gap-2">
         <Button onClick={() => fileRef.current?.click()}>Import JSON</Button>
