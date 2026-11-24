@@ -10,6 +10,65 @@ machine.
 
 ![The editor: forms on the left, the live page at real size on the right](docs/screenshot.png)
 
+## Quick start
+
+You do not need to be a developer to run it. You need:
+
+- **Node.js 22.12 or newer.** Get the LTS version from
+  [nodejs.org](https://nodejs.org/). `node --version` shows the one you have.
+- **Git**, from [git-scm.com](https://git-scm.com/downloads), to download the
+  app and its updates.
+- **Google Chrome or Microsoft Edge** (optional). With one of them installed,
+  **Export PDF** saves the file in one click. Without either, use **Print
+  instead** and save the PDF from the print dialog.
+
+Then, in a terminal (PowerShell or Command Prompt on Windows, Terminal on macOS
+and Linux):
+
+```bash
+git clone https://github.com/Juan-Hernandez-Dev/Resume_Builder.git
+cd Resume_Builder
+npm install
+npm run app
+```
+
+Open http://127.0.0.1:3000. `npm run app` builds the app and then serves it,
+so the first start takes a minute. Keep the terminal open while you use it and
+press <kbd>Ctrl</kbd>+<kbd>C</kbd> there to stop it; next time, run
+`npm run app` again from the `Resume_Builder` folder.
+
+**A fresh clone opens an empty resume.** The first page load creates the
+`data/` folder and an empty `data/default.json` (the `default` variant) for
+you to fill in. To start from the bundled placeholder resume (John Doe)
+instead, either copy it in **before the first run**:
+
+```bash
+# macOS / Linux
+mkdir -p data && cp examples/john-doe.json data/default.json
+```
+
+```powershell
+# Windows (PowerShell)
+New-Item -ItemType Directory -Force data | Out-Null; Copy-Item examples\john-doe.json data\default.json
+```
+
+or, at any time, open the app and use **Import JSON** with
+`examples/john-doe.json`.
+
+**Where your resume is stored:** in the `data/` folder inside `Resume_Builder`,
+one JSON file per version of your resume. Git ignores every JSON file there, so
+your resume never ends up in a commit and updating the app leaves it alone. The
+app never reads `examples/`: the placeholder is only a starting point to copy
+or import. Copy the `data/` folder somewhere safe to back it up.
+
+**To update** to the latest version, stop the app, then:
+
+```bash
+git pull
+npm install
+npm run app
+```
+
 ## Why it exists
 
 Resume tools tend to make you pick between a WYSIWYG editor that fights you
@@ -26,7 +85,7 @@ you the moment the document stops fitting.
 Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS v4 ·
 zod · dnd-kit · vitest
 
-~9,700 lines across 72 source files, covered by 293 unit tests.
+~11,600 lines across 88 source files, covered by 381 unit tests.
 
 ## Design notes
 
@@ -53,21 +112,33 @@ The decisions worth a look, if you are reading this as a code sample:
 
 ## How to run
 
+For development, with hot reload (Node.js 22.12 or newer, as `engines` in
+`package.json` says; `.nvmrc` picks Node 24 for nvm users):
+
 ```bash
 npm install
 npm run dev
 ```
 
-Then open http://localhost:3000.
+Then open http://127.0.0.1:3000. To run the production build instead, use
+`npm run app` (build, then serve), as in the quick start.
 
-On a fresh clone there is no resume yet. The app seeds an empty one on first
-load, or you can start from the included placeholder:
+On a fresh clone there is no resume yet: the first page load seeds an empty
+`default` variant in `data/default.json`. To start from the placeholder in
+`examples/john-doe.json` instead, copy it in before the first run, or use
+**Import JSON** in the app with that file:
 
 ```bash
-cp data/example.json data/default.json
+# macOS / Linux
+mkdir -p data && cp examples/john-doe.json data/default.json
+# Windows (PowerShell)
+New-Item -ItemType Directory -Force data | Out-Null; Copy-Item examples\john-doe.json data\default.json
 ```
 
-Both `dev` and `start` bind to `127.0.0.1` on purpose. The API reads and writes
+After the first run `data/default.json` already exists (the seeded empty
+resume), and copying over it replaces it; Import JSON is the safer route then.
+
+`dev`, `start` and `app` all bind to `127.0.0.1` on purpose. The API reads and writes
 the files under `data/` and has no authentication, because it is meant for one
 person on one machine. Bound to every interface, anyone on the same network
 could read and overwrite the resume. If you do want it reachable from another
@@ -75,7 +146,11 @@ device, pass the host explicitly: `npm run dev -- -H 0.0.0.0`.
 
 ## Your resume stays out of git
 
-`data/*.json` is gitignored, with `data/example.json` as the only exception.
+`data/*.json` is gitignored, with no exception, and the repository ships no
+file in `data/`. The placeholder resume lives in `examples/john-doe.json`
+instead: a variant committed in `data/` would be opened on a fresh clone in
+place of the seeded empty one, and autosave would then write your resume into
+a tracked file.
 
 That is deliberate: a resume holds your real name, phone number and email
 address, and a repo is the wrong place for them. Your variants live on your
@@ -86,6 +161,7 @@ Other scripts:
 
 | Script              | What it does                           |
 | ------------------- | -------------------------------------- |
+| `npm run app`       | Build, then serve it (the quick start) |
 | `npm run dev`       | Development server                     |
 | `npm run build`     | Production build                       |
 | `npm start`         | Serve the production build             |
@@ -112,6 +188,12 @@ The screen is two panes with a toolbar on top:
   reordered. Sections and entries can also be hidden: a hidden item stays in the
   JSON file and disappears from the page and from the plain text.
 - Section titles are edited in place, in the card header.
+- **Header links** have two fields: the **Display label** is the text printed
+  on the page (for example `linkedin.com/in/johndoe`) and the **Link URL** is
+  where it points. The link button next to the URL copies the label across:
+  it trims it, adds `https://` when there is no scheme, keeps an existing
+  `http://` or `https://` as is, and turns an email address into a `mailto:`
+  link. A link with no label prints its URL.
 - **Reordering** works by dragging the grip handle, or from the keyboard: focus
   a grip handle, press <kbd>Space</kbd>, move with <kbd>↑</kbd>/<kbd>↓</kbd>,
   press <kbd>Space</kbd> again to drop (<kbd>Esc</kbd> cancels). Only the handle
@@ -185,10 +267,12 @@ data/frontend.json    -> variant "frontend"
 The file name (without `.json`) is the variant name. Names are restricted to
 `[a-z0-9-_]` so they can never escape the `data/` directory.
 
-On a fresh clone there is no `data/` directory at all. The first page load
-creates it and seeds an empty `data/default.json`, because `PUT` deliberately
-refuses to create files and there would otherwise be nothing to save into. An
-existing variant is never touched by this.
+On a fresh clone there is no `data/` directory at all: git does not track
+empty directories, and nothing in `data/` is committed. The first page load
+creates it and seeds an empty `data/default.json` whenever `data/` holds no
+variant, because `PUT` deliberately refuses to create files and there would
+otherwise be nothing to save into. An existing variant is never touched by
+this.
 
 `/?variant=<name>` opens a specific variant on load. The toolbar's picker
 switches variants without reloading; the query parameter exists so the recovery
@@ -217,6 +301,7 @@ The files are read and written through route handlers:
 | POST   | `/api/variants`       | Duplicate: body `{ from, to }` -> `{ name, resume }` |
 | GET    | `/api/variants/:name` | `{ name, resume }`, validated against the schema     |
 | PUT    | `/api/variants/:name` | Validate the body, then write the file                |
+| POST   | `/api/pdf`            | Body `{ resume, variant }` -> the PDF, as a download  |
 
 `PUT` replaces the whole document and does **not** create a variant; `POST`
 duplicates an existing one first.
@@ -224,7 +309,11 @@ duplicates an existing one first.
 Errors are JSON: `400` for an invalid name or an invalid request body (with the
 Zod `issues` attached), `404` for an unknown variant, `409` when duplicating
 onto a name that already exists, and `422` when a file on disk no longer matches
-the schema.
+the schema. `/api/pdf` answers `415` unless the body is sent as
+`application/json`, `403` when the request is not addressed to this machine,
+`413` when the body is over 2 MB (the same cap as Import JSON), `503` with `code: "browser-not-found"` when there is no Chrome or Edge to
+drive, and `500` when the browser failed (the details go to the terminal, not
+to the response).
 
 A filesystem failure is reported with what to do about it rather than as an
 opaque `500`: a full disk, a locked file, a permissions problem and a read-only
@@ -235,18 +324,58 @@ messages never include host paths.
 
 ## How to export a PDF
 
-1. Pick the page size in the toolbar (Letter or A4).
-2. Print the page (`Ctrl+P`) or use **Export PDF**, which calls
-   `window.print()`.
-3. In the Chrome print dialog:
-   - **Destination**: Save as PDF
-   - **Margins**: None (the page component already has 0.5in margins)
-   - **Background graphics**: off
-   - **Headers and footers**: off
+1. Pick the page size (Letter or A4) and the date format in the toolbar.
+2. Click **Export PDF**. The file downloads straight away, named after the
+   header name and the variant, for example `John-Doe-Resume.pdf` (or
+   `John-Doe-Resume-frontend.pdf` for any variant other than `default`).
 
-The print stylesheet sets `@page { size: letter|a4; margin: 0 }`, hides the
-editor and toolbars, and removes the preview's scale transform, so the PDF is
-the page at its true size. Printing works from either preview tab.
+The PDF is made from the document on screen, so unsaved edits are in it. The
+editor posts the document to `POST /api/pdf`, which drives a headless copy of
+**the Google Chrome or Microsoft Edge already installed on your machine**
+(through `puppeteer-core`; no browser is downloaded with the app). Chrome
+opens a print-only page, `/print`, that renders just the resume with the same
+components and stylesheets as the preview, waits for the fonts, and prints it
+with the print stylesheet, no headers or footers, background graphics off and
+the sheet size taken from the CSS `@page` rules. The text stays real,
+selectable text: nothing is rasterized. The document is handed to that page
+through an in-memory store under a random, short-lived token; it is never
+written to disk, and the token is deleted as soon as the PDF is done.
+
+**Requirement: Chrome or Edge.** Direct export needs Google Chrome or Microsoft
+Edge installed (Chromium works too). The usual install locations on Windows,
+macOS and Linux are found on their own, Chrome first and Edge as the fallback.
+For a browser anywhere else, point `CHROME_PATH` at its executable:
+
+```bash
+# Windows (PowerShell)
+$env:CHROME_PATH = "D:\Apps\Chrome\chrome.exe"; npm run dev
+# macOS / Linux
+CHROME_PATH="/opt/google/chrome/chrome" npm run dev
+```
+
+When `CHROME_PATH` is set it is used as is, never swapped for another browser;
+if nothing exists at that path the export says so.
+
+Export only answers requests addressed to this machine (`127.0.0.1`,
+`localhost` or `[::1]`), because it launches a browser. Opened from another
+device, it is refused.
+
+### When direct export is not available
+
+If no browser is found, the toolbar says so next to the button ("Direct PDF
+export needs Google Chrome or Microsoft Edge installed. Set CHROME_PATH to use
+a custom install.") instead of failing silently. Any other failure shows its
+reason in the same place. Either way, **Print instead** opens the browser's
+print dialog, which produces the same page. In the Chrome print dialog:
+
+- **Destination**: Save as PDF
+- **Margins**: None (the page component already has 0.5in margins)
+- **Background graphics**: off
+- **Headers and footers**: off
+
+`Ctrl+P` works too, from either preview tab. The print stylesheet sets
+`@page { size: letter|a4; margin: 0 }`, hides the editor and toolbars, and
+removes the preview's scale transform, so the PDF is the page at its true size.
 
 ### Page overflow
 
@@ -357,6 +486,8 @@ The rendered page is built so an applicant tracking system reads it correctly:
 ```
 app/
   api/variants/           Route handlers for reading and writing variants
+  api/pdf/                PDF export: headless Chrome prints /print
+  print/                  Print-only page: just the resume, for the PDF
   resume.css              Every resume design token (the one place to tweak)
   print.css               @page sizes and print-only rules
   globals.css             App chrome (Tailwind)
@@ -372,6 +503,7 @@ components/
     useResumeEditor       Document state, autosave, variants, import/export
     VariantRecovery       Shown instead of the editor for an unreadable variant
     TopBar                Variant, save, page size, dates, export, overflow
+    PdfExport             Export PDF button, download, Print instead fallback
     PreviewPane           Page preview + plain text tab, overflow measurement
     PlainTextPanel        The ATS view
     EditorPanel           Left pane: header form, sections, section picker
@@ -384,7 +516,9 @@ components/
     ui/                   Field, TextInput, TextArea, Button, IconButton,
                           DragHandle, CollapsibleCard, SegmentedControl,
                           SortableList, Icons
-data/                     One JSON file per variant
+data/                     One JSON file per variant (gitignored, created on first load)
+examples/
+  john-doe.json           Placeholder resume to copy or import; never read by the app
 lib/
   schema.ts               Zod schemas and inferred types
   resume-ops.ts           Immutable document operations used by the editor
@@ -398,6 +532,11 @@ lib/
   date-separator.ts       Hyphen / en dash date ranges
   skills-items.ts         Comma separated list <-> string[]
   overflow.ts             Page overflow measurement and message
+  link-url.ts             Link label -> URL (the "Use label as URL" button)
+  pdf-export.ts           PDF request schema, file name, host guard
+  chrome-path.ts          Finds Chrome/Edge: CHROME_PATH, then install paths
+  print-store.ts          In-memory, short-lived hand-off to the /print page
+  pdf-render.ts           puppeteer-core: print a page to PDF (server only)
   __tests__/              Unit tests
 ```
 
@@ -412,7 +551,16 @@ the default `node` environment. The exception is
 `components/editor/__tests__/useResumeEditor.test.tsx`, which drives the
 autosave state machine with fake timers and a stubbed `fetch`; it opts into a
 DOM with a `// @vitest-environment happy-dom` docblock at the top of the file,
-so the rest of the suite keeps running without one.
+so the rest of the suite keeps running without one. The component tests in
+`components/*/__tests__/` (the link list, Export PDF and its fallback, inline
+editing) do the same.
+
+No test launches a real browser. `app/api/pdf/__tests__/route.test.ts` drives
+the PDF route with the browser lookup and the renderer mocked out (every status
+code, the response headers, and the print job being deleted), and
+`lib/__tests__/pdf-render.test.ts` drives the renderer against a fake browser:
+the print job is stored only once the browser is up, and a browser that fails
+to close, or will not close, is killed without losing the PDF.
 
 `lib/__tests__/atomic-write.test.ts` runs against real temp directories on
 purpose: what it asserts is the behaviour of `rename` and the open flags on
