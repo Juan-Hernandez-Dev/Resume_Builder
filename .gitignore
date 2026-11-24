@@ -47,10 +47,11 @@ next-env.d.ts
 
 # Resume content is personal data: real names, phone numbers and email
 # addresses. The app seeds its own variant on a fresh clone (see
-# ensureFirstVariant in lib/variants.ts), so nothing here needs to be
-# committed. example.json is the one exception: placeholder content only.
+# ensureFirstVariant in lib/variants.ts), so nothing here is ever committed,
+# with no exception: a tracked variant would be opened instead of the seed and
+# autosave would write the user's resume into it. The placeholder resume lives
+# in examples/, which the app never reads.
 /data/*.json
-!/data/example.json
 
 # local tooling state, not part of the project
 /.atl/
