@@ -5,7 +5,21 @@ import path from "node:path";
 
 import { createFileExclusive, writeFileAtomic } from "./atomic-write";
 import { emptyResume, resumeSchema, type Resume } from "./schema";
+import {
+  InvalidVariantDataError,
+  VariantExistsError,
+  VariantNotFoundError,
+  flattenIssues,
+} from "./storage/errors";
 import { assertValidVariantName, isValidVariantName } from "./variant-name";
+
+// The domain errors are shared with every storage adapter; re-exported so the
+// route handlers keep importing them from here.
+export {
+  InvalidVariantDataError,
+  VariantExistsError,
+  VariantNotFoundError,
+} from "./storage/errors";
 
 export {
   InvalidVariantNameError,
@@ -22,30 +36,6 @@ export {
  * put next to a variant are never mistaken for one.
  */
 export const DATA_DIR = path.resolve(process.cwd(), "data");
-
-export class VariantNotFoundError extends Error {
-  constructor(readonly variant: string) {
-    super(`Variant "${variant}" does not exist.`);
-    this.name = "VariantNotFoundError";
-  }
-}
-
-export class VariantExistsError extends Error {
-  constructor(readonly variant: string) {
-    super(`Variant "${variant}" already exists.`);
-    this.name = "VariantExistsError";
-  }
-}
-
-export class InvalidVariantDataError extends Error {
-  constructor(
-    readonly variant: string,
-    readonly issues: readonly { path: string; message: string }[],
-  ) {
-    super(`Variant "${variant}" does not match the resume schema.`);
-    this.name = "InvalidVariantDataError";
-  }
-}
 
 export class VariantPathError extends Error {
   constructor(readonly variant: string) {
@@ -199,11 +189,3 @@ export async function ensureFirstVariant(name: string): Promise<string[]> {
   return [name];
 }
 
-function flattenIssues(
-  issues: readonly { path: readonly PropertyKey[]; message: string }[],
-): { path: string; message: string }[] {
-  return issues.map((issue) => ({
-    path: issue.path.map(String).join("."),
-    message: issue.message,
-  }));
-}
