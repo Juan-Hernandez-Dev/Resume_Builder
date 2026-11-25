@@ -812,6 +812,67 @@ describe("load example", () => {
     expect(result.current.variant).toBe("example");
   });
 
+  it("writes edits typed while the example was being stored to the old variant", async () => {
+    const repository = createMemoryRepository({ default: seedResume() });
+    const create = repository.create.bind(repository);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    vi.spyOn(repository, "create").mockImplementation(async (name, resume) => {
+      await gate;
+      return create(name, resume);
+    });
+    const { result } = mountOn(repository);
+
+    let load!: Promise<void>;
+    act(() => {
+      load = result.current.loadExample();
+    });
+    await settle();
+    // Typed after the example went to storage, before it came back.
+    act(() => result.current.updateHeader({ name: "Typed mid-load" }));
+
+    await act(async () => {
+      release();
+      await load;
+    });
+
+    expect((await repository.read("default")).header.name).toBe("Typed mid-load");
+    expect(result.current.variant).toBe("example");
+    expect(result.current.resume.header.name).toBe("John Doe");
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it("stays on the old variant when those mid-load edits fail to write", async () => {
+    const repository = createMemoryRepository({ default: seedResume() });
+    const create = repository.create.bind(repository);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    vi.spyOn(repository, "create").mockImplementation(async (name, resume) => {
+      await gate;
+      return create(name, resume);
+    });
+    vi.spyOn(repository, "write").mockRejectedValue(
+      new StorageError("Disk is full.", { reason: "quota", retryable: false }),
+    );
+    const { result } = mountOn(repository);
+
+    let load!: Promise<void>;
+    act(() => {
+      load = result.current.loadExample();
+    });
+    await settle();
+    act(() => result.current.updateHeader({ name: "Typed mid-load" }));
+
+    await act(async () => {
+      release();
+      await load;
+    });
+
+    expect(result.current.variant).toBe("default");
+    expect(result.current.resume.header.name).toBe("Typed mid-load");
+    expect(result.current.dirty).toBe(true);
+  });
+
   it("stays where it is and says why when the example cannot be stored", async () => {
     const repository = createMemoryRepository({ default: seedResume() });
     vi.spyOn(repository, "create").mockRejectedValue(

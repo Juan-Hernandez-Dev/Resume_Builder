@@ -307,7 +307,8 @@ export function useResumeEditor({
    * Opens the bundled placeholder resume (John Doe) as its own variant,
    * `example`, creating it the first time. An existing `example` is opened as
    * it is, so the user's edits to it are never overwritten, and the variant on
-   * screen is untouched either way: its pending edits are written first.
+   * screen is untouched either way: its pending edits are written first, and
+   * again after the example is stored, for anything typed in the meantime.
    */
   const loadExample = useCallback(async () => {
     setError(null);
@@ -320,6 +321,10 @@ export function useResumeEditor({
         EXAMPLE_VARIANT,
         loadExampleResume,
       );
+      // Anything typed while the example was being stored was typed into the
+      // variant on screen, so it is written there before the switch.
+      if (dirtyRef.current && !(await flush())) return;
+
       adopt(EXAMPLE_VARIANT, example);
     } catch (cause) {
       setError(describeError(cause, "Could not open the example"));
