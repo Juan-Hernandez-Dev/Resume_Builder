@@ -52,14 +52,14 @@ mkdir -p data && cp examples/john-doe.json data/default.json
 New-Item -ItemType Directory -Force data | Out-Null; Copy-Item examples\john-doe.json data\default.json
 ```
 
-or, at any time, open the app and use **Import JSON** with
-`examples/john-doe.json`.
+or, at any time, open the app and click **Load example**, which opens it as
+its own variant, `example`, next to yours.
 
 **Where your resume is stored:** in the `data/` folder inside `Resume_Builder`,
 one JSON file per version of your resume. Git ignores every JSON file there, so
 your resume never ends up in a commit and updating the app leaves it alone. The
-app never reads `examples/`: the placeholder is only a starting point to copy
-or import. Copy the `data/` folder somewhere safe to back it up.
+app never treats `examples/` as a variant: the placeholder is only a starting
+point to copy, import or open with **Load example**. Copy the `data/` folder somewhere safe to back it up.
 
 **To update** to the latest version, stop the app, then:
 
@@ -130,8 +130,8 @@ Then open http://127.0.0.1:3000. To run the production build instead, use
 
 On a fresh clone there is no resume yet: the first page load seeds an empty
 `default` variant in `data/default.json`. To start from the placeholder in
-`examples/john-doe.json` instead, copy it in before the first run, or use
-**Import JSON** in the app with that file:
+`examples/john-doe.json` instead, copy it in before the first run, or click
+**Load example** in the app (it creates `data/example.json`):
 
 ```bash
 # macOS / Linux
@@ -184,7 +184,7 @@ The screen is two panes with a toolbar on top:
 - **Right**: the live page at real size, scaled to fit the pane, plus a
   **Plain text** tab that shows the resume the way an ATS reads it (same order,
   same line breaks, no markup) with a **Copy** button.
-- **Toolbar**: variant picker, Duplicate variant, Save, page size, date
+- **Toolbar**: variant picker, Duplicate variant, Load example, Save, page size, date
   separator, Export PDF, Import/Export JSON and the page-overflow indicator.
 
 ### Editing
@@ -288,6 +288,11 @@ rule (and asks before using the cleaned-up version), copies the current
 variant's file and switches to it. A name that is already taken is reported
 instead of overwritten.
 
+**Load example** opens the placeholder resume (John Doe) as the variant
+`example`, creating it from `examples/john-doe.json` the first time and simply
+opening it after that, so edits made to it are never overwritten. Pending
+changes to the variant on screen are written first.
+
 To start a new variant by hand, copy an existing file:
 
 ```bash
@@ -304,12 +309,14 @@ The files are read and written through route handlers:
 | ------ | --------------------- | ---------------------------------------------------- |
 | GET    | `/api/variants`       | `{ variants: string[] }`, sorted                     |
 | POST   | `/api/variants`       | Duplicate: body `{ from, to }` -> `{ name, resume }` |
+| POST   | `/api/variants`       | Create: body `{ to, resume }` -> `{ name, resume }`  |
 | GET    | `/api/variants/:name` | `{ name, resume }`, validated against the schema     |
 | PUT    | `/api/variants/:name` | Validate the body, then write the file                |
 | POST   | `/api/pdf`            | Body `{ resume, variant }` -> the PDF, as a download  |
 
 `PUT` replaces the whole document and does **not** create a variant; `POST`
-duplicates an existing one first.
+creates one, as a copy of another or from a document, and never replaces an
+existing one.
 
 Errors are JSON: `400` for an invalid name or an invalid request body (with the
 Zod `issues` attached), `404` for an unknown variant, `409` when duplicating
@@ -526,7 +533,7 @@ components/
                           SortableList, Icons
 data/                     One JSON file per variant (gitignored, created on first load)
 examples/
-  john-doe.json           Placeholder resume to copy or import; never read by the app
+  john-doe.json           Placeholder resume; read only by Load example
 lib/
   schema.ts               Zod schemas and inferred types
   resume-ops.ts           Immutable document operations used by the editor
@@ -541,6 +548,7 @@ lib/
     memory-repository.ts  In memory: tests, and the web build's fallback
   atomic-write.ts         Crash-safe writes: temp file, fsync, rename, .bak
   variant-name.ts         Variant name validation and sanitization
+  example-resume.ts       Loads the placeholder on demand, for Load example
   api-response.ts         Reading an API payload, describing an API failure
   import-file.ts          Validating a picked JSON file, size cap included
   fs-errors.ts            Filesystem error codes -> actionable messages

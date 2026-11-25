@@ -11,7 +11,17 @@ import {
   type MockInstance,
 } from "vitest";
 
+import type { ReactNode } from "react";
+
+import {
+  PlatformProvider,
+  browserStorage,
+  type Platform,
+} from "@/components/platform/PlatformProvider";
 import { emptyResume, type Resume } from "@/lib/schema";
+import { StorageError } from "@/lib/storage/errors";
+import { createMemoryRepository } from "@/lib/storage/memory-repository";
+import type { ResumeRepository } from "@/lib/storage/port";
 
 import {
   AUTOSAVE_DELAY_MS,
@@ -731,5 +741,89 @@ describe("unsaved-changes guard", () => {
     const event = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
+  });
+});
+
+describe("load example", () => {
+  /** The hook on a memory repository, injected the way the web build does it. */
+  function mountOn(repository: ResumeRepository, initialResume = seedResume()) {
+    const platform: Platform = {
+      repository,
+      pdf: "print",
+      storage: browserStorage,
+    };
+    return renderHook(
+      () =>
+        useResumeEditor({
+          initialVariant: "default",
+          initialResume,
+          initialVariants: ["default"],
+        }),
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <PlatformProvider value={platform}>{children}</PlatformProvider>
+        ),
+      },
+    );
+  }
+
+  it("creates the example variant from the bundled placeholder and opens it", async () => {
+    const repository = createMemoryRepository({ default: seedResume() });
+    const { result } = mountOn(repository);
+
+    await act(async () => {
+      await result.current.loadExample();
+    });
+
+    expect(result.current.variant).toBe("example");
+    expect(result.current.variants).toEqual(["default", "example"]);
+    expect(result.current.resume.header.name).toBe("John Doe");
+    expect(result.current.dirty).toBe(false);
+    expect((await repository.read("example")).header.name).toBe("John Doe");
+  });
+
+  it("opens an existing example variant instead of overwriting it", async () => {
+    const repository = createMemoryRepository({
+      default: seedResume(),
+      example: seedResume("Mine now"),
+    });
+    const { result } = mountOn(repository);
+
+    await act(async () => {
+      await result.current.loadExample();
+    });
+
+    expect(result.current.variant).toBe("example");
+    expect(result.current.resume.header.name).toBe("Mine now");
+    expect(result.current.variants).toEqual(["default", "example"]);
+    expect((await repository.read("example")).header.name).toBe("Mine now");
+  });
+
+  it("writes pending edits to the current variant first", async () => {
+    const repository = createMemoryRepository({ default: seedResume() });
+    const { result } = mountOn(repository);
+    act(() => result.current.updateHeader({ name: "Typed" }));
+
+    await act(async () => {
+      await result.current.loadExample();
+    });
+
+    expect((await repository.read("default")).header.name).toBe("Typed");
+    expect(result.current.variant).toBe("example");
+  });
+
+  it("stays where it is and says why when the example cannot be stored", async () => {
+    const repository = createMemoryRepository({ default: seedResume() });
+    vi.spyOn(repository, "create").mockRejectedValue(
+      new StorageError("Storage is full.", { reason: "quota", retryable: false }),
+    );
+    const { result } = mountOn(repository);
+
+    await act(async () => {
+      await result.current.loadExample();
+    });
+
+    expect(result.current.variant).toBe("default");
+    expect(result.current.error).toBe("Storage is full.");
   });
 });

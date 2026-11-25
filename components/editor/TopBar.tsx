@@ -90,6 +90,13 @@ export function TopBar({
         <Button disabled={editor.loading} onClick={handleDuplicate}>
           Duplicate variant
         </Button>
+        <Button
+          disabled={editor.loading}
+          onClick={() => void editor.loadExample()}
+          title='Open the John Doe placeholder as the variant "example"'
+        >
+          Load example
+        </Button>
       </div>
 
       <div className="flex items-center gap-2">

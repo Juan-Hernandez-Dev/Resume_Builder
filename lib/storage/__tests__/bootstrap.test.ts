@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { emptyResume } from "@/lib/schema";
 
-import { ensureFirstVariant, openInitial } from "../bootstrap";
+import { createOrOpen, ensureFirstVariant, openInitial } from "../bootstrap";
 import { StorageError, VariantExistsError } from "../errors";
 import { createMemoryRepository } from "../memory-repository";
 import type { ResumeRepository } from "../port";
@@ -172,5 +172,50 @@ describe("openInitial", () => {
       kind: "recovery",
       reason: "The saved variants could not be read.",
     });
+  });
+});
+
+describe("createOrOpen", () => {
+  it("creates the variant from the loaded document when it is missing", async () => {
+    const repo = createMemoryRepository();
+    const load = vi.fn(async () => seedResume("John Doe"));
+
+    expect(await createOrOpen(repo, "example", load)).toEqual(
+      seedResume("John Doe"),
+    );
+    expect(await repo.read("example")).toEqual(seedResume("John Doe"));
+  });
+
+  it("opens the variant as it is when it already exists", async () => {
+    const repo = createMemoryRepository({ example: seedResume("Edited") });
+    const load = vi.fn(async () => seedResume("John Doe"));
+
+    expect(await createOrOpen(repo, "example", load)).toEqual(
+      seedResume("Edited"),
+    );
+    expect(await repo.read("example")).toEqual(seedResume("Edited"));
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it("opens the variant when it appears between the check and the create", async () => {
+    const repo = createMemoryRepository();
+    const load = async () => {
+      await repo.create("example", seedResume("Other tab"));
+      return seedResume("John Doe");
+    };
+
+    expect(await createOrOpen(repo, "example", load)).toEqual(
+      seedResume("Other tab"),
+    );
+  });
+
+  it("passes on a failure to store it", async () => {
+    const repo = createMemoryRepository();
+    const failure = new StorageError("full", { reason: "quota", retryable: false });
+    vi.spyOn(repo, "create").mockRejectedValue(failure);
+
+    await expect(
+      createOrOpen(repo, "example", async () => seedResume()),
+    ).rejects.toBe(failure);
   });
 });

@@ -107,3 +107,23 @@ function pickVariant(
     ? DEFAULT_VARIANT
     : (variants[0] ?? DEFAULT_VARIANT);
 }
+
+/**
+ * The variant `name`, created from `load()` if it does not exist yet. An
+ * existing one is opened as it is, never overwritten: after "Load example"
+ * the user may well have edited it. `load` only runs when it is needed, and
+ * the create stays exclusive, so one that appears in between still wins.
+ */
+export async function createOrOpen(
+  repository: ResumeRepository,
+  name: string,
+  load: () => Promise<Resume>,
+): Promise<Resume> {
+  if ((await repository.list()).includes(name)) return repository.read(name);
+  try {
+    return await repository.create(name, await load());
+  } catch (error) {
+    if (error instanceof VariantExistsError) return repository.read(name);
+    throw error;
+  }
+}

@@ -11,7 +11,8 @@ import { resumeSchema } from "@/lib/schema";
  * data/ holds no variant, so a variant file shipped in the repository would
  * be opened instead, and autosave would then write the user's real resume
  * into a tracked file. The placeholder therefore lives in examples/, which
- * the app never reads.
+ * the app never treats as a variant: it is only read by "Load example",
+ * through lib/example-resume.ts, to create one.
  */
 
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -90,7 +91,7 @@ describe("runtime code", () => {
     return files.flat();
   }
 
-  it("never reads from examples/", async () => {
+  it("reads examples/ only through lib/example-resume.ts", async () => {
     const files = [
       ...(await sourceFiles(path.join(ROOT, "app"))),
       ...(await sourceFiles(path.join(ROOT, "components"))),
@@ -99,12 +100,15 @@ describe("runtime code", () => {
     ];
     expect(files.length).toBeGreaterThan(10);
 
-    const offenders: string[] = [];
+    // The one allowed reader imports the placeholder into the client bundle to
+    // create the "example" variant; nothing else may read it, and in
+    // particular nothing may serve it as a variant.
+    const readers: string[] = [];
     for (const file of files) {
-      if (/\bexamples\b|john-doe\.json/.test(await fs.readFile(file, "utf8"))) {
-        offenders.push(path.relative(ROOT, file));
+      if (/\bexamples\/|john-doe\.json/.test(await fs.readFile(file, "utf8"))) {
+        readers.push(path.relative(ROOT, file));
       }
     }
-    expect(offenders).toEqual([]);
+    expect(readers).toEqual([path.join("lib", "example-resume.ts")]);
   });
 });

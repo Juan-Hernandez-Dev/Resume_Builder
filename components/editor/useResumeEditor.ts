@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { usePlatform } from "@/components/platform/PlatformProvider";
 import { messageOf } from "@/lib/api-response";
+import { EXAMPLE_VARIANT, loadExampleResume } from "@/lib/example-resume";
 import { readResumeFile } from "@/lib/import-file";
 import * as ops from "@/lib/resume-ops";
 import {
@@ -12,6 +13,7 @@ import {
   type ResumeSettings,
   type SectionType,
 } from "@/lib/schema";
+import { createOrOpen } from "@/lib/storage/bootstrap";
 import { isRepositoryError } from "@/lib/storage/errors";
 
 /**
@@ -264,6 +266,25 @@ export function useResumeEditor({
     [commit, flush, repository],
   );
 
+  /** Puts a variant that was just stored on screen, saved and listed. */
+  const adopt = useCallback(
+    (name: string, document: Resume) => {
+      setVariants((current) =>
+        current.includes(name)
+          ? current
+          : [...current, name].sort((a, b) => a.localeCompare(b)),
+      );
+      // A load started before this point must not overwrite the new variant.
+      loadRef.current += 1;
+      requestedRef.current = name;
+      variantRef.current = name;
+      setVariant(name);
+      setLastSavedAt(null);
+      commit(document, false);
+    },
+    [commit],
+  );
+
   const duplicate = useCallback(
     async (to: string) => {
       setError(null);
@@ -272,27 +293,40 @@ export function useResumeEditor({
         // The copy is made from the stored variant, so pending edits go first.
         if (!(await flush())) return;
 
-        const created = await repository.duplicate(variantRef.current, to);
-        setVariants((current) =>
-          current.includes(to)
-            ? current
-            : [...current, to].sort((a, b) => a.localeCompare(b)),
-        );
-        // A load started before this point must not overwrite the new variant.
-        loadRef.current += 1;
-        requestedRef.current = to;
-        variantRef.current = to;
-        setVariant(to);
-        setLastSavedAt(null);
-        commit(created, false);
+        adopt(to, await repository.duplicate(variantRef.current, to));
       } catch (cause) {
         setError(describeError(cause, `Could not create "${to}"`));
       } finally {
         setLoading(false);
       }
     },
-    [commit, flush, repository],
+    [adopt, flush, repository],
   );
+
+  /**
+   * Opens the bundled placeholder resume (John Doe) as its own variant,
+   * `example`, creating it the first time. An existing `example` is opened as
+   * it is, so the user's edits to it are never overwritten, and the variant on
+   * screen is untouched either way: its pending edits are written first.
+   */
+  const loadExample = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      if (!(await flush())) return;
+
+      const example = await createOrOpen(
+        repository,
+        EXAMPLE_VARIANT,
+        loadExampleResume,
+      );
+      adopt(EXAMPLE_VARIANT, example);
+    } catch (cause) {
+      setError(describeError(cause, "Could not open the example"));
+    } finally {
+      setLoading(false);
+    }
+  }, [adopt, flush, repository]);
 
   /* ---------------------------------------------------------------------- */
   /* Import / export                                                         */
@@ -442,6 +476,7 @@ export function useResumeEditor({
     save,
     loadVariant,
     duplicate,
+    loadExample,
     importJson,
     exportJson,
     ...actions,
