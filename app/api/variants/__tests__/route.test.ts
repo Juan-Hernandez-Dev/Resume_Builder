@@ -35,7 +35,7 @@ function named(name: string): Resume {
 }
 
 async function post(body: unknown): Promise<Response> {
-  const { POST } = await import("../route");
+  const { POST } = await import("../route.local");
   return POST(
     new Request("http://127.0.0.1/api/variants", {
       method: "POST",

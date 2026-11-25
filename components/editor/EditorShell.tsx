@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { NO_OVERFLOW, type Overflow } from "@/lib/overflow";
 import type { Resume } from "@/lib/schema";
@@ -16,15 +16,20 @@ import { useResumeEditor } from "./useResumeEditor";
  *
  * Everything outside the resume page carries `.no-print`, so printing this
  * screen produces the document and nothing else.
+ *
+ * `notice` is a line under the toolbar for whatever the page around the editor
+ * needs said, such as where the web build keeps the resumes.
  */
 export function EditorShell({
   initialVariant,
   initialResume,
   variants,
+  notice,
 }: {
   initialVariant: string;
   initialResume: Resume;
   variants: string[];
+  notice?: ReactNode;
 }) {
   const editor = useResumeEditor({
     initialVariant,
@@ -37,6 +42,7 @@ export function EditorShell({
   return (
     <div className="app-shell flex h-screen flex-col overflow-hidden">
       <TopBar editor={editor} overflow={overflow} />
+      {notice}
 
       {editor.error === null ? null : (
         <div

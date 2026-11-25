@@ -6,7 +6,8 @@ document at real page size (Letter or A4), so what you see is what the PDF
 gets.
 
 No database, no account, no network calls. The document never leaves the
-machine.
+machine. The same app also builds as a static [web demo](#web-demo-vercel)
+that keeps each visitor's resumes in their own browser.
 
 ![The editor: forms on the left, the live page at real size on the right](docs/screenshot.png)
 
@@ -85,7 +86,7 @@ you the moment the document stops fitting.
 Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS v4 ·
 zod · dnd-kit · vitest
 
-~11,600 lines across 88 source files, covered by 381 unit tests.
+~14,600 lines across 117 source files, covered by 512 unit tests.
 
 ## Design notes
 
@@ -169,11 +170,67 @@ Other scripts:
 | `npm run app`       | Build, then serve it (the quick start) |
 | `npm run dev`       | Development server                     |
 | `npm run build`     | Production build                       |
+| `npm run build:web` | Static web demo in `out/`, then `check:web` |
+| `npm run check:web` | Checks `out/`: no API calls, no puppeteer |
 | `npm start`         | Serve the production build             |
 | `npm test`          | Unit tests (vitest)                    |
 | `npm run test:watch`| Same tests, in watch mode              |
 | `npm run typecheck` | `tsc --noEmit`                         |
 | `npm run lint`      | ESLint                                 |
+
+## Web demo (Vercel)
+
+The same code builds a second app: a static site anyone can open, with no
+server behind it. Set `NEXT_PUBLIC_APP_MODE=web` (what `npm run build:web`
+does) and the build swaps the filesystem page for one that runs entirely in
+the browser.
+
+What differs from the local app:
+
+- **Storage is the visitor's browser.** Every variant is kept in IndexedDB, on
+  the visitor's own machine; nothing is ever sent to a server, and there is no
+  account. Clearing the site's data, or another browser or device, means no
+  resumes. A note under the toolbar says so, and the app asks the browser to
+  keep the data after the first save (`navigator.storage.persist()`).
+- **Back up with Export JSON.** That file is the only copy that lives outside
+  the browser; Import JSON brings it back.
+- **Export PDF opens the print dialog**, since there is no Chrome to drive on a
+  static host. The settings that make the PDF match the preview are shown next
+  to the button (Save as PDF, Margins: None, Background graphics off, Headers
+  and footers off).
+- **Load example** opens the John Doe placeholder as the variant `example`; a
+  first visit starts on an empty `default`, as a fresh clone does.
+- A browser with no usable IndexedDB (some private windows) still gets a
+  working editor, kept in memory, with a warning that nothing outlives the tab.
+
+How the build is split: files only one app needs carry it in their name.
+`page.local.tsx`, `print/page.local.tsx` and every `route.local.ts` exist only
+in the local build, `page.web.tsx` only in the web one, and a `.web.ts(x)`
+sibling stands in for a client module whose local version calls the API (see
+`next.config.ts`). The web build is a static export, and `npm run check:web`
+fails it if `out/` still mentions puppeteer or calls `/api/`.
+
+Build and preview it locally:
+
+```bash
+npm run build:web
+npx serve out
+```
+
+Deploy on Vercel by importing the repository with these project settings:
+
+| Setting              | Value                                              |
+| -------------------- | -------------------------------------------------- |
+| Framework preset     | Next.js                                            |
+| Environment variable | `NEXT_PUBLIC_APP_MODE=web`, for Production and Preview |
+| Node.js version      | 24.x                                               |
+| Build command        | `npm run build:web` (also set in `vercel.json`)     |
+| Output directory     | `out`, only if Vercel does not detect it           |
+
+`vercel.json` also sets the security headers for every route: a
+Content-Security-Policy that allows nothing but this origin (fonts are
+self-hosted by `next/font`, so `font-src 'self'` is enough), no referrer,
+`nosniff`, no camera, microphone or location, and HSTS.
 
 ## Using the editor
 
@@ -497,14 +554,15 @@ The rendered page is built so an applicant tracking system reads it correctly:
 
 ```
 app/
-  api/variants/           Route handlers for reading and writing variants
-  api/pdf/                PDF export: headless Chrome prints /print
-  print/                  Print-only page: just the resume, for the PDF
+  api/variants/           Route handlers for reading and writing variants (local only)
+  api/pdf/                PDF export: headless Chrome prints /print (local only)
+  print/                  Print-only page: just the resume, for the PDF (local only)
   resume.css              Every resume design token (the one place to tweak)
   print.css               @page sizes and print-only rules
   globals.css             App chrome (Tailwind)
   layout.tsx              Font + global stylesheets
-  page.tsx                Server component: reads the variants, renders the shell
+  page.local.tsx          Local app: reads the variants on the server, renders the shell
+  page.web.tsx            Web build: renders WebEditorRoot, which does it in the browser
   error.tsx               Last-resort boundary, so the app is never unloadable
 components/
   resume/                 Presentational resume components (the printed page)
@@ -512,13 +570,17 @@ components/
     SkillsBlock, CertificationBlock, ResumeScaler
   platform/               PlatformProvider: repository, PDF mode and storage
                           wording, injected into the editor
+  web/                    WebEditorRoot: the web build's app, on IndexedDB
   editor/                 The editor UI
     EditorShell           Two-pane layout, owns the editor state
     useResumeEditor       Document state, autosave, variants, import/export
     VariantRecovery       Shown instead of the editor for an unreadable variant
                           (container; VariantRecoveryView draws it)
     TopBar                Variant, save, page size, dates, export, overflow
-    PdfExport             Export PDF button, download, Print instead fallback
+    PdfExport             Export PDF: DirectPdfExport locally, print dialog on the web
+    DirectPdfExport       Posts to /api/pdf, downloads, Print instead fallback
+                          (DirectPdfExport.web.tsx stands in for it on the web)
+    PrintHint             The print dialog settings that match the preview
     PreviewPane           Page preview + plain text tab, overflow measurement
     PlainTextPanel        The ATS view
     EditorPanel           Left pane: header form, sections, section picker
@@ -532,6 +594,9 @@ components/
                           DragHandle, CollapsibleCard, SegmentedControl,
                           SortableList, Icons
 data/                     One JSON file per variant (gitignored, created on first load)
+scripts/
+  build-web.mjs           npm run build:web: the web build, then the check
+  check-web-build.mjs     npm run check:web: no puppeteer or /api/ in out/
 examples/
   john-doe.json           Placeholder resume; read only by Load example
 lib/
@@ -544,9 +609,11 @@ lib/
     bootstrap.ts          Start-up use cases: seed a first variant, open one
     fs-repository.ts      data/ files through lib/variants.ts (server only)
     http-repository.ts    The /api/variants routes, from the browser
+                          (http-repository.web.ts stands in for it on the web)
     browser-repository.ts IndexedDB, for the web build
     memory-repository.ts  In memory: tests, and the web build's fallback
   atomic-write.ts         Crash-safe writes: temp file, fsync, rename, .bak
+  app-mode.ts             NEXT_PUBLIC_APP_MODE: local or web, anything else throws
   variant-name.ts         Variant name validation and sanitization
   example-resume.ts       Loads the placeholder on demand, for Load example
   api-response.ts         Reading an API payload, describing an API failure
@@ -565,7 +632,7 @@ lib/
 ```
 
 `lib/variants.ts` is `server-only`: it is imported by the route handlers and,
-through `lib/storage/fs-repository.ts`, by `app/page.tsx`, never by a client
+through `lib/storage/fs-repository.ts`, by `app/page.local.tsx`, never by a client
 component. Everything the editor persists goes through the repository it is
 given, which in the local app is the API routes.
 
@@ -578,7 +645,13 @@ autosave state machine with fake timers and a stubbed `fetch`; it opts into a
 DOM with a `// @vitest-environment happy-dom` docblock at the top of the file,
 so the rest of the suite keeps running without one. The component tests in
 `components/*/__tests__/` (the link list, Export PDF and its fallback, inline
-editing) do the same.
+editing, the recovery screen, the web build's root) do the same.
+
+Storage is tested once, as a contract: `lib/storage/__tests__/repository.contract.ts`
+states what every repository promises (sorted lists, write never creating,
+create never replacing, invalid names refused, documents copied in and out),
+and the filesystem, IndexedDB and memory adapters each run it. IndexedDB comes
+from `fake-indexeddb`, a fresh database per test.
 
 No test launches a real browser. `app/api/pdf/__tests__/route.test.ts` drives
 the PDF route with the browser lookup and the renderer mocked out (every status

@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { emptyResume } from "@/lib/schema";
 
-import { createOrOpen, ensureFirstVariant, openInitial } from "../bootstrap";
+import {
+  createOrOpen,
+  ensureFirstVariant,
+  openInitial,
+  selectRepository,
+} from "../bootstrap";
 import { StorageError, VariantExistsError } from "../errors";
 import { createMemoryRepository } from "../memory-repository";
 import type { ResumeRepository } from "../port";
@@ -217,5 +222,49 @@ describe("createOrOpen", () => {
     await expect(
       createOrOpen(repo, "example", async () => seedResume()),
     ).rejects.toBe(failure);
+  });
+});
+
+describe("selectRepository", () => {
+  it("keeps the primary repository when it works", async () => {
+    const primary = createMemoryRepository();
+    const fallback = vi.fn(() => createMemoryRepository());
+
+    expect(await selectRepository(primary, fallback)).toEqual({
+      repository: primary,
+      degraded: false,
+    });
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it("falls back when the primary storage is unavailable", async () => {
+    const primary: ResumeRepository = {
+      ...createMemoryRepository(),
+      list: () =>
+        Promise.reject(
+          new StorageError("gone", { reason: "unavailable", retryable: false }),
+        ),
+    };
+    const fallback = createMemoryRepository();
+
+    expect(await selectRepository(primary, () => fallback)).toEqual({
+      repository: fallback,
+      degraded: true,
+    });
+  });
+
+  it("keeps the primary for any other failure, so recovery can report it", async () => {
+    const primary: ResumeRepository = {
+      ...createMemoryRepository(),
+      list: () =>
+        Promise.reject(new StorageError("full", { reason: "quota", retryable: false })),
+    };
+    const fallback = vi.fn(() => createMemoryRepository());
+
+    expect(await selectRepository(primary, fallback)).toEqual({
+      repository: primary,
+      degraded: false,
+    });
+    expect(fallback).not.toHaveBeenCalled();
   });
 });

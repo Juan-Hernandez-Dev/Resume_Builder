@@ -18,8 +18,14 @@ import {
   type MockInstance,
 } from "vitest";
 
+import {
+  PlatformProvider,
+  browserStorage,
+  type Platform,
+} from "@/components/platform/PlatformProvider";
 import { BROWSER_NOT_FOUND, BROWSER_NOT_FOUND_MESSAGE } from "@/lib/pdf-export";
 import { emptyResume, type Resume } from "@/lib/schema";
+import { createMemoryRepository } from "@/lib/storage/memory-repository";
 
 import { PdfExport } from "../PdfExport";
 
@@ -263,5 +269,39 @@ describe("PdfExport", () => {
     await clickExport();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(downloads).toEqual(["John-Doe-Resume.pdf"]);
+  });
+});
+
+describe("PdfExport in the web build", () => {
+  function renderPrintMode() {
+    const platform: Platform = {
+      repository: createMemoryRepository(),
+      pdf: "print",
+      storage: browserStorage,
+    };
+    render(
+      <PlatformProvider value={platform}>
+        <PdfExport resume={seedResume()} variant="default" />
+      </PlatformProvider>,
+    );
+  }
+
+  it("opens the print dialog, with no request to a server", async () => {
+    renderPrintMode();
+
+    await clickExport();
+
+    expect(printMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("shows the print settings that make the PDF match the preview", () => {
+    renderPrintMode();
+
+    const hint = screen.getByText(/Save as PDF/);
+    expect(hint.textContent).toContain("Margins: None");
+    expect(hint.textContent).toContain("Headers and footers off");
+    expect(screen.queryByRole("button", { name: "Print instead" })).toBeNull();
   });
 });

@@ -8,7 +8,7 @@ import { renderPdf } from "@/lib/pdf-render";
 import { getPrintJob } from "@/lib/print-store";
 import { emptyResume, type Resume } from "@/lib/schema";
 
-import { POST } from "../route";
+import { POST } from "../route.local";
 
 /**
  * POST /api/pdf with the browser mocked out: the guards, the status codes and

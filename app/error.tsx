@@ -7,9 +7,9 @@ import { Button } from "@/components/editor/ui/Button";
 /**
  * Last resort for anything the page did not already handle.
  *
- * `app/page.tsx` catches the failures that are expected on a disk-backed
- * editor (a corrupt variant, an unreadable data directory) and renders the
- * recovery screen instead. This boundary exists so that a failure nobody
+ * The page (`app/page.local.tsx`, or WebEditorRoot in the web build) catches
+ * the failures that are expected of stored data (a corrupt variant, storage
+ * that cannot be read) and renders the recovery screen instead. This boundary exists so that a failure nobody
  * predicted still leaves a page the user can read and retry from, rather than
  * the framework's error screen with no way back into the app.
  *

@@ -11,6 +11,8 @@
     "app": "next build && next start -H 127.0.0.1",
     "dev": "next dev -H 127.0.0.1",
     "build": "next build",
+    "build:web": "node scripts/build-web.mjs",
+    "check:web": "node scripts/check-web-build.mjs",
     "start": "next start -H 127.0.0.1",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",

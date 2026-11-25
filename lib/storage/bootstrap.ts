@@ -1,6 +1,11 @@
 import { emptyResume, type Resume } from "../schema";
 
-import { InvalidVariantDataError, VariantExistsError, isRepositoryError } from "./errors";
+import {
+  InvalidVariantDataError,
+  StorageError,
+  VariantExistsError,
+  isRepositoryError,
+} from "./errors";
 import type { ResumeRepository } from "./port";
 
 /**
@@ -126,4 +131,25 @@ export async function createOrOpen(
     if (error instanceof VariantExistsError) return repository.read(name);
     throw error;
   }
+}
+
+/**
+ * The repository to run on: `primary` when its storage can be reached at all,
+ * else the one `fallback` makes, flagged as `degraded` so the page can say
+ * that nothing outlives the tab. Only an *unavailable* storage falls back; a
+ * full or failing one stays, so the recovery screen reports it instead of the
+ * user typing into a memory store believing it is saved.
+ */
+export async function selectRepository(
+  primary: ResumeRepository,
+  fallback: () => ResumeRepository,
+): Promise<{ repository: ResumeRepository; degraded: boolean }> {
+  try {
+    await primary.list();
+  } catch (error) {
+    if (error instanceof StorageError && error.reason === "unavailable") {
+      return { repository: fallback(), degraded: true };
+    }
+  }
+  return { repository: primary, degraded: false };
 }
