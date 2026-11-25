@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { describeFailure, messageOf, readResume } from "@/lib/api-response";
+import { usePlatform } from "@/components/platform/PlatformProvider";
+import { messageOf } from "@/lib/api-response";
 import { readResumeFile } from "@/lib/import-file";
 import * as ops from "@/lib/resume-ops";
 import {
@@ -11,13 +12,16 @@ import {
   type ResumeSettings,
   type SectionType,
 } from "@/lib/schema";
+import { isRepositoryError } from "@/lib/storage/errors";
 
 /**
  * The editor's whole state layer: the document, which variant it came from,
  * and everything needed to persist it.
  *
- * Note this file never imports lib/variants.ts — that module is server-only.
- * All persistence goes through the /api/variants routes. Everything pure that
+ * Persistence goes through the platform's repository (see
+ * components/platform/PlatformProvider.tsx): the /api/variants routes in local
+ * mode, IndexedDB in the web build. This file never imports lib/variants.ts —
+ * that module is server-only. Everything pure that
  * used to live down here (reading a payload, formatting a failure, validating
  * a picked file) is in lib/api-response.ts and lib/import-file.ts, where it is
  * unit tested; this file is the stateful part, tested through the hook.
@@ -44,6 +48,7 @@ export function useResumeEditor({
   initialResume: Resume;
   initialVariants: string[];
 }) {
+  const { repository } = usePlatform();
   const [resume, setResume] = useState(initialResume);
   const [variant, setVariant] = useState(initialVariant);
   const [variants, setVariants] = useState(initialVariants);
@@ -124,17 +129,7 @@ export function useResumeEditor({
         const snapshot = resumeRef.current;
         const name = variantRef.current;
 
-        const response = await fetch(`/api/variants/${encodeURIComponent(name)}`, {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(snapshot),
-        });
-
-        if (!response.ok) {
-          setError(await describeFailure(response, `Could not save "${name}".`));
-          scheduleRetry();
-          return false;
-        }
+        await repository.write(name, snapshot);
 
         setLastSavedAt(Date.now());
         setRetryAttempt(0);
@@ -147,7 +142,7 @@ export function useResumeEditor({
 
       return true;
     } catch (cause) {
-      setError(`Could not save: ${messageOf(cause)}`);
+      setError(describeError(cause, "Could not save"));
       scheduleRetry();
       return false;
     } finally {
@@ -155,7 +150,7 @@ export function useResumeEditor({
       inFlightRef.current = null;
       setSaving(false);
     }
-  }, [scheduleRetry]);
+  }, [repository, scheduleRetry]);
 
   /**
    * Writes the document. Resolves to whether it is now on disk, so switching
@@ -246,21 +241,8 @@ export function useResumeEditor({
         if (!(await flush())) return abort();
         if (stale()) return;
 
-        const response = await fetch(`/api/variants/${encodeURIComponent(name)}`, {
-          cache: "no-store",
-        });
+        const loaded = await repository.read(name);
         if (stale()) return;
-        if (!response.ok) {
-          setError(await describeFailure(response, `Could not open "${name}".`));
-          return abort();
-        }
-
-        const loaded = await readResume(response);
-        if (stale()) return;
-        if (loaded === null) {
-          setError(`"${name}" did not come back as a valid resume.`);
-          return abort();
-        }
 
         // Anything typed while the response was in flight was typed into the
         // old variant, so it is written there before the switch.
@@ -273,13 +255,13 @@ export function useResumeEditor({
         commit(loaded, false);
       } catch (cause) {
         if (stale()) return;
-        setError(`Could not open "${name}": ${messageOf(cause)}`);
+        setError(describeError(cause, `Could not open "${name}"`));
         abort();
       } finally {
         if (!stale()) setLoading(false);
       }
     },
-    [commit, flush],
+    [commit, flush, repository],
   );
 
   const duplicate = useCallback(
@@ -287,22 +269,10 @@ export function useResumeEditor({
       setError(null);
       setLoading(true);
       try {
-        // The copy is made from the file on disk, so pending edits go first.
+        // The copy is made from the stored variant, so pending edits go first.
         if (!(await flush())) return;
 
-        const response = await fetch("/api/variants", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ from: variantRef.current, to }),
-        });
-        if (!response.ok) {
-          setError(
-            await describeFailure(response, `Could not create "${to}".`),
-          );
-          return;
-        }
-
-        const created = await readResume(response);
+        const created = await repository.duplicate(variantRef.current, to);
         setVariants((current) =>
           current.includes(to)
             ? current
@@ -314,14 +284,14 @@ export function useResumeEditor({
         variantRef.current = to;
         setVariant(to);
         setLastSavedAt(null);
-        if (created !== null) commit(created, false);
+        commit(created, false);
       } catch (cause) {
-        setError(`Could not create "${to}": ${messageOf(cause)}`);
+        setError(describeError(cause, `Could not create "${to}"`));
       } finally {
         setLoading(false);
       }
     },
-    [commit, flush],
+    [commit, flush, repository],
   );
 
   /* ---------------------------------------------------------------------- */
@@ -476,6 +446,17 @@ export function useResumeEditor({
     exportJson,
     ...actions,
   };
+}
+
+/**
+ * One line for a failure. A repository error already says what went wrong in
+ * the user's terms; anything else (a request that never reached the server)
+ * is prefixed with what was being attempted.
+ */
+function describeError(cause: unknown, attempt: string): string {
+  return isRepositoryError(cause)
+    ? cause.message
+    : `${attempt}: ${messageOf(cause)}`;
 }
 
 /** Whether the document has anything in it worth asking about. */

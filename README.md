@@ -105,6 +105,11 @@ The decisions worth a look, if you are reading this as a code sample:
 - **Variant names are an allowlist, checked twice.** They become filenames, so
   they are restricted to `[a-z0-9-_]`, and the resolved path is then verified
   to still sit inside `data/`.
+- **Storage sits behind a port.** The editor never knows where variants
+  live: it talks to a `ResumeRepository` (`lib/storage/port.ts`) handed to
+  it by `components/platform/PlatformProvider.tsx`. Locally that is the API
+  routes over the files in `data/`; one shared contract suite pins the
+  behaviour every adapter (filesystem, IndexedDB, memory) must keep.
 - **Component caching is off on purpose.** `next.config.ts` explains why: with
   it on, the build bakes the JSON into its output and saves appear to do
   nothing. For a disk-backed editor that is a correctness bug, not a
@@ -498,10 +503,13 @@ components/
   resume/                 Presentational resume components (the printed page)
     ResumePage, Header, Section, EntryBlock, AchievementBlock,
     SkillsBlock, CertificationBlock, ResumeScaler
+  platform/               PlatformProvider: repository, PDF mode and storage
+                          wording, injected into the editor
   editor/                 The editor UI
     EditorShell           Two-pane layout, owns the editor state
     useResumeEditor       Document state, autosave, variants, import/export
     VariantRecovery       Shown instead of the editor for an unreadable variant
+                          (container; VariantRecoveryView draws it)
     TopBar                Variant, save, page size, dates, export, overflow
     PdfExport             Export PDF button, download, Print instead fallback
     PreviewPane           Page preview + plain text tab, overflow measurement
@@ -523,6 +531,14 @@ lib/
   schema.ts               Zod schemas and inferred types
   resume-ops.ts           Immutable document operations used by the editor
   variants.ts             Filesystem access, constrained to data/ (server only)
+  storage/                Where variants live, behind one interface
+    port.ts               ResumeRepository: list, read, write, create, duplicate
+    errors.ts             Not found, exists, invalid data, storage failure
+    bootstrap.ts          Start-up use cases: seed a first variant, open one
+    fs-repository.ts      data/ files through lib/variants.ts (server only)
+    http-repository.ts    The /api/variants routes, from the browser
+    browser-repository.ts IndexedDB, for the web build
+    memory-repository.ts  In memory: tests, and the web build's fallback
   atomic-write.ts         Crash-safe writes: temp file, fsync, rename, .bak
   variant-name.ts         Variant name validation and sanitization
   api-response.ts         Reading an API payload, describing an API failure
@@ -540,9 +556,10 @@ lib/
   __tests__/              Unit tests
 ```
 
-`lib/variants.ts` is `server-only`: it is imported by `app/page.tsx` and the
-route handlers, never by a client component. Everything the editor persists
-goes through the API routes.
+`lib/variants.ts` is `server-only`: it is imported by the route handlers and,
+through `lib/storage/fs-repository.ts`, by `app/page.tsx`, never by a client
+component. Everything the editor persists goes through the repository it is
+given, which in the local app is the API routes.
 
 ## Tests
 
