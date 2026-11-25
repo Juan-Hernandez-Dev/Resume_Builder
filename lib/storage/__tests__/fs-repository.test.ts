@@ -25,8 +25,8 @@ import { describeRepositoryContract, seedResume } from "./repository.contract";
  * DATA_DIR is resolved from `process.cwd()` when lib/variants.ts loads, so the
  * module is loaded once with the working directory pointed at a temp root, and
  * data/ is wiped before every test. Loading it once (rather than once per
- * test, as lib/__tests__/variants.test.ts does) keeps one copy of the error
- * classes, which the shared contract checks with `instanceof`.
+ * test, as bootstrap-fs.test.ts does) keeps one copy of the error classes,
+ * which the shared contract checks with `instanceof`.
  */
 
 let root: string;

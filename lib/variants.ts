@@ -4,7 +4,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { createFileExclusive, writeFileAtomic } from "./atomic-write";
-import { emptyResume, resumeSchema, type Resume } from "./schema";
+import { resumeSchema, type Resume } from "./schema";
 import {
   InvalidVariantDataError,
   VariantExistsError,
@@ -165,27 +165,3 @@ export async function duplicateVariant(
   const source = await readVariant(from);
   return createVariant(to, source);
 }
-
-/**
- * Guarantees the editor has a variant file to save into, and returns the
- * variant list to use.
- *
- * On a fresh clone `/data` is missing or empty: without this the editor would
- * open on a blank document whose every save failed with a 404, because `PUT`
- * deliberately refuses to create files. Seeding one empty variant is the whole
- * bootstrap. An existing variant is never touched, and the seed is an
- * exclusive create, so a file that appears in between is kept as it is.
- */
-export async function ensureFirstVariant(name: string): Promise<string[]> {
-  const existing = await listVariants();
-  if (existing.length > 0) return existing;
-
-  try {
-    await createVariant(name, emptyResume());
-  } catch (error) {
-    // Someone else got there first: that file is the first variant.
-    if (!(error instanceof VariantExistsError)) throw error;
-  }
-  return [name];
-}
-

@@ -7,10 +7,10 @@ import { describe, expect, it } from "vitest";
 import { resumeSchema } from "@/lib/schema";
 
 /**
- * What a fresh clone gets. `ensureFirstVariant` only seeds `default` when
- * data/ holds no variant, so a variant file shipped in the repository would
- * be opened instead, and autosave would then write the user's real resume
- * into a tracked file. The placeholder therefore lives in examples/, which
+ * What a fresh clone gets. `ensureFirstVariant` (lib/storage/bootstrap.ts)
+ * only seeds `default` when data/ holds no variant, so a variant file shipped
+ * in the repository would be opened instead, and autosave would then write
+ * the user's real resume into a tracked file. The placeholder therefore lives in examples/, which
  * the app never treats as a variant: it is only read by "Load example",
  * through lib/example-resume.ts, to create one.
  */

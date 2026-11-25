@@ -155,7 +155,7 @@ export function useResumeEditor({
   }, [repository, scheduleRetry]);
 
   /**
-   * Writes the document. Resolves to whether it is now on disk, so switching
+   * Writes the document. Resolves to whether it is now stored, so switching
    * variants can refuse to discard edits that failed to save.
    *
    * A save already in flight is never interrupted: the request is flagged as
@@ -218,7 +218,7 @@ export function useResumeEditor({
   /**
    * Opens another variant.
    *
-   * Three things have to hold at once. Pending edits go to disk first, and a
+   * Three things have to hold at once. Pending edits are saved first, and a
    * failed write cancels the switch instead of discarding them. Two quick
    * selections must end on the variant chosen last, not on whichever response
    * happens to arrive last, which is what the load id is for. And edits typed
