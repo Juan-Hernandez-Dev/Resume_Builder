@@ -52,23 +52,33 @@ export function createBrowserRepository({
   let opening: Promise<IDBDatabase> | null = null;
   let persistRequested = false;
 
+  /** Drops the cached connection, unless a newer one already replaced it. */
+  function forget(attempt: Promise<IDBDatabase>): void {
+    if (opening === attempt) opening = null;
+  }
+
   function open(): Promise<IDBDatabase> {
-    opening ??= openDatabase(idb, dbName).then(
+    if (opening !== null) return opening;
+    const attempt: Promise<IDBDatabase> = openDatabase(idb, dbName).then(
       (db) => {
         // Another tab upgrading the schema must not be blocked by this one.
         db.onversionchange = () => {
           db.close();
-          opening = null;
+          forget(attempt);
         };
+        // Closed by the browser rather than by this code (site data cleared,
+        // storage evicted): the next call opens a new connection.
+        db.onclose = () => forget(attempt);
         return db;
       },
       (cause: unknown) => {
         // A failed open is not cached: the next call tries again.
-        opening = null;
+        forget(attempt);
         throw cause;
       },
     );
-    return opening;
+    opening = attempt;
+    return attempt;
   }
 
   /**
@@ -81,7 +91,8 @@ export function createBrowserRepository({
     work: (store: IDBObjectStore, fail: (error: Error) => void) => () => T,
     conflict?: () => Error,
   ): Promise<T> {
-    const db = await open();
+    const attempt = open();
+    const db = await attempt;
     return new Promise<T>((resolve, reject) => {
       let failure: Error | null = null;
       let result: (() => T) | null = null;
@@ -99,6 +110,9 @@ export function createBrowserRepository({
       try {
         tx = db.transaction(STORE, mode);
       } catch (cause) {
+        // The connection closed without a `close` event: this call fails as
+        // retryable, and the next one opens a new connection.
+        if (errorName(cause) === "InvalidStateError") forget(attempt);
         reject(storageFailure(cause));
         return;
       }
@@ -280,10 +294,7 @@ function unavailable(cause: unknown): StorageError {
 
 /** A platform failure as a StorageError: quota is told apart, the rest is io. */
 function storageFailure(cause: unknown): StorageError {
-  const name =
-    typeof cause === "object" && cause !== null
-      ? (cause as { name?: unknown }).name
-      : undefined;
+  const name = errorName(cause);
   if (name === "QuotaExceededError") {
     return new StorageError(QUOTA, { reason: "quota", retryable: false, cause });
   }
@@ -291,6 +302,12 @@ function storageFailure(cause: unknown): StorageError {
     `This browser's storage failed${typeof name === "string" ? ` (${name})` : ""}. Try again in a moment.`,
     { reason: "io", retryable: true, cause },
   );
+}
+
+function errorName(cause: unknown): unknown {
+  return typeof cause === "object" && cause !== null
+    ? (cause as { name?: unknown }).name
+    : undefined;
 }
 
 /** `navigator.storage.persist()`, where the browser has it. */

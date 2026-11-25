@@ -209,4 +209,36 @@ describe("createBrowserRepository", () => {
       seedResume("Grace"),
     );
   });
+
+  it("reopens the database after the browser closes it (site data cleared)", async () => {
+    const idb = new IDBFactory();
+    const open = vi.spyOn(idb, "open");
+    const repo = createBrowserRepository({ idb });
+    await repo.create("default", seedResume());
+
+    // An abnormal close: the browser closes the connection and fires `close`.
+    const db = open.mock.results[0].value.result as IDBDatabase;
+    db.close();
+    db.onclose?.call(db, new Event("close"));
+
+    expect(await repo.list()).toEqual(["default"]);
+    expect(open).toHaveBeenCalledTimes(2);
+  });
+
+  it("reopens on the next call when a transaction finds the connection closed", async () => {
+    const idb = new IDBFactory();
+    const open = vi.spyOn(idb, "open");
+    const repo = createBrowserRepository({ idb });
+    await repo.create("default", seedResume());
+
+    // Closed without a `close` event: db.transaction() throws InvalidStateError.
+    (open.mock.results[0].value.result as IDBDatabase).close();
+
+    await expect(repo.list()).rejects.toMatchObject({
+      name: "StorageError",
+      retryable: true,
+    });
+    expect(await repo.list()).toEqual(["default"]);
+    expect(open).toHaveBeenCalledTimes(2);
+  });
 });
