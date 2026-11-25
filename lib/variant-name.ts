@@ -30,7 +30,7 @@ export function assertValidVariantName(name: unknown): string {
 }
 
 const JSON_EXTENSION = /\.json$/i;
-const DIACRITICS = /[̀-ͯ]/g;
+const DIACRITICS = /[\u0300-\u036f]/g;
 const UNSUPPORTED = /[^a-z0-9-_]+/g;
 const SEPARATOR_RUN = /[-_]{2,}/g;
 const EDGE_SEPARATORS = /^[-_]+|[-_]+$/g;
