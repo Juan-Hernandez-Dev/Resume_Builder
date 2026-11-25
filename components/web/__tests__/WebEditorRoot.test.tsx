@@ -26,8 +26,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function renderRoot(repository: () => ResumeRepository) {
-  render(<WebEditorRoot createRepository={repository} />);
+async function renderRoot(
+  repository?: () => ResumeRepository,
+  fallback?: () => ResumeRepository,
+) {
+  render(
+    <WebEditorRoot createRepository={repository} createFallback={fallback} />,
+  );
   // Lets the start-up effect open the storage and read the variant.
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -102,6 +107,45 @@ describe("WebEditorRoot", () => {
     expect(screen.getByRole("button", { name: "Load example" })).toBeTruthy();
     expect(document.body.textContent).toContain(
       "nothing is saved when this tab closes",
+    );
+  });
+
+  it("falls back to memory, and says so, when merely reading indexedDB throws", async () => {
+    // Blocked site data: the getter itself throws a SecurityError.
+    const own = Object.getOwnPropertyDescriptor(globalThis, "indexedDB");
+    Object.defineProperty(globalThis, "indexedDB", {
+      configurable: true,
+      get() {
+        throw new DOMException("The operation is insecure.", "SecurityError");
+      },
+    });
+    try {
+      await renderRoot();
+    } finally {
+      if (own) Object.defineProperty(globalThis, "indexedDB", own);
+      else delete (globalThis as { indexedDB?: unknown }).indexedDB;
+    }
+
+    expect(screen.queryByText("Loading…")).toBeNull();
+    expect(screen.getByRole("button", { name: "Load example" })).toBeTruthy();
+    expect(document.body.textContent).toContain(
+      "nothing is saved when this tab closes",
+    );
+  });
+
+  it("shows an error instead of loading forever when even the fallback fails", async () => {
+    await renderRoot(
+      () => {
+        throw new Error("no storage");
+      },
+      () => {
+        throw new Error("no memory either");
+      },
+    );
+
+    expect(screen.queryByText("Loading…")).toBeNull();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "The editor could not start",
     );
   });
 });

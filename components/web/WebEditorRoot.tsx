@@ -30,16 +30,23 @@ import type { ResumeRepository } from "@/lib/storage/port";
  *
  * A browser with no usable IndexedDB (some private windows) still gets a
  * working editor on a memory store, with a warning that nothing outlives the
- * tab, rather than an app that cannot open at all.
+ * tab, rather than an app that cannot open at all. That holds for any failure
+ * while starting, including a browser where merely reading `indexedDB` throws
+ * (blocked site data); if even the memory store cannot start, the page says
+ * so instead of loading forever.
  */
 export function WebEditorRoot({
   createRepository = () => createBrowserRepository(),
+  createFallback = () => createMemoryRepository(),
 }: {
   /** The storage to open; tests pass a fresh database or a memory store. */
   createRepository?: () => ResumeRepository;
+  /** The storage used when that one cannot be opened. */
+  createFallback?: () => ResumeRepository;
 }) {
   const [state, setState] = useState<
     | { phase: "loading" }
+    | { phase: "failed" }
     | {
         phase: "ready";
         repository: ResumeRepository;
@@ -50,20 +57,40 @@ export function WebEditorRoot({
 
   useEffect(() => {
     let cancelled = false;
+    const requested = new URLSearchParams(window.location.search).get(
+      "variant",
+    );
 
     async function start() {
-      const { repository, degraded } = await selectRepository(
-        createRepository(),
-        () => createMemoryRepository(),
-      );
-      const requested = new URLSearchParams(window.location.search).get(
-        "variant",
-      );
-      const view = await openInitial(repository, requested);
-      if (!cancelled) setState({ phase: "ready", repository, degraded, view });
+      try {
+        const { repository, degraded } = await selectRepository(
+          createRepository(),
+          createFallback,
+        );
+        return {
+          repository,
+          degraded,
+          view: await openInitial(repository, requested),
+        };
+      } catch {
+        // Whatever went wrong, a tab-long memory store beats no editor.
+        const repository = createFallback();
+        return {
+          repository,
+          degraded: true,
+          view: await openInitial(repository, requested),
+        };
+      }
     }
 
-    void start();
+    start().then(
+      (ready) => {
+        if (!cancelled) setState({ phase: "ready", ...ready });
+      },
+      () => {
+        if (!cancelled) setState({ phase: "failed" });
+      },
+    );
     return () => {
       cancelled = true;
     };
@@ -79,6 +106,18 @@ export function WebEditorRoot({
         : { repository, pdf: "print", storage: browserStorage },
     [repository],
   );
+
+  if (state.phase === "failed") {
+    return (
+      <main
+        role="alert"
+        className="flex min-h-screen items-center justify-center px-4 text-center text-sm text-red-700"
+      >
+        The editor could not start in this browser. Reload the page to try
+        again.
+      </main>
+    );
+  }
 
   if (state.phase === "loading" || platform === null) {
     return (
