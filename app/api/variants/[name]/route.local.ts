@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { describeFsError, fsErrorStatus } from "@/lib/fs-errors";
+import {
+  LOCAL_ONLY,
+  requireJsonBody,
+  requireLoopbackHost,
+} from "@/lib/request-guards";
 import { resumeSchema } from "@/lib/schema";
 import {
   InvalidVariantDataError,
@@ -15,11 +20,17 @@ export const dynamic = "force-dynamic";
 
 type RouteParams = { params: Promise<{ name: string }> };
 
-/** GET /api/variants/:name -> the variant, validated against the schema. */
+/**
+ * GET /api/variants/:name -> the variant, validated against the schema. Only
+ * for a request addressed to this machine (see lib/request-guards.ts).
+ */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: RouteParams,
 ): Promise<NextResponse> {
+  const refused = requireLoopbackHost(request, LOCAL_ONLY);
+  if (refused) return refused;
+
   const { name } = await params;
   try {
     return NextResponse.json({ name, resume: await readVariant(name) });
@@ -28,11 +39,18 @@ export async function GET(
   }
 }
 
-/** PUT /api/variants/:name -> validates the body, then writes the file. */
+/**
+ * PUT /api/variants/:name -> validates the body, then writes the file. The
+ * body must be sent as JSON, to a loopback Host.
+ */
 export async function PUT(
   request: Request,
   { params }: RouteParams,
 ): Promise<NextResponse> {
+  const refused =
+    requireJsonBody(request) ?? requireLoopbackHost(request, LOCAL_ONLY);
+  if (refused) return refused;
+
   const { name } = await params;
 
   let body: unknown;

@@ -34,15 +34,26 @@ function named(name: string): Resume {
   return resume;
 }
 
-async function post(body: unknown): Promise<Response> {
+async function post(
+  body: unknown,
+  {
+    contentType = "application/json",
+    host = "127.0.0.1:3000",
+  }: { contentType?: string; host?: string } = {},
+): Promise<Response> {
   const { POST } = await import("../route.local");
   return POST(
-    new Request("http://127.0.0.1/api/variants", {
+    new Request("http://127.0.0.1:3000/api/variants", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": contentType, host },
       body: JSON.stringify(body),
     }),
   );
+}
+
+async function list(host = "127.0.0.1:3000"): Promise<Response> {
+  const { GET } = await import("../route.local");
+  return GET(new Request("http://127.0.0.1:3000/api/variants", { headers: { host } }));
 }
 
 async function stored(name: string): Promise<unknown> {
@@ -117,5 +128,45 @@ describe("POST /api/variants with { to, resume }", () => {
   it("refuses a body that is neither shape", async () => {
     expect((await post({ to: "example" })).status).toBe(400);
     expect((await post({ nothing: true })).status).toBe(400);
+  });
+});
+
+describe("request guards", () => {
+  it("lists for a request addressed to this machine", async () => {
+    await seed("default", named("Ada"));
+
+    const response = await list("localhost:3000");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ variants: ["default"] });
+  });
+
+  it("refuses to list for any other Host, so a DNS-rebinding page sees nothing", async () => {
+    await seed("default", named("Ada"));
+
+    const response = await list("evil.example.com:3000");
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).not.toHaveProperty("variants");
+  });
+
+  it("refuses to create for any other Host", async () => {
+    const response = await post(
+      { to: "example", resume: named("x") },
+      { host: "evil.example.com:3000" },
+    );
+
+    expect(response.status).toBe(403);
+    await expect(fs.access(path.join(root, "data", "example.json"))).rejects.toThrow();
+  });
+
+  it("answers 415 to a body not sent as application/json, as a cross-site form would", async () => {
+    const response = await post(
+      { to: "example", resume: named("x") },
+      { contentType: "text/plain" },
+    );
+
+    expect(response.status).toBe(415);
+    await expect(fs.access(path.join(root, "data", "example.json"))).rejects.toThrow();
   });
 });

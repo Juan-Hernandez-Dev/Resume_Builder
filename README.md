@@ -375,14 +375,20 @@ The files are read and written through route handlers:
 creates one, as a copy of another or from a document, and never replaces an
 existing one.
 
+Every route only answers a request addressed to this machine: a `Host` header
+other than `localhost`, `127.x.x.x` or `[::1]` gets `403`, which turns away
+DNS-rebinding pages and other devices on the network. A request with a body
+(`POST`, `PUT`) must send it as `application/json`, or it gets `415`; a
+cross-site page cannot do that without a CORS preflight, which these routes
+never answer.
+
 Errors are JSON: `400` for an invalid name or an invalid request body (with the
-Zod `issues` attached), `404` for an unknown variant, `409` when duplicating
-onto a name that already exists, and `422` when a file on disk no longer matches
-the schema. `/api/pdf` answers `415` unless the body is sent as
-`application/json`, `403` when the request is not addressed to this machine,
-`413` when the body is over 2 MB (the same cap as Import JSON), `503` with `code: "browser-not-found"` when there is no Chrome or Edge to
-drive, and `500` when the browser failed (the details go to the terminal, not
-to the response).
+Zod `issues` attached), `403` and `415` as above, `404` for an unknown variant,
+`409` when duplicating onto a name that already exists, and `422` when a file
+on disk no longer matches the schema. `/api/pdf` also answers `413` when the
+body is over 2 MB (the same cap as Import JSON), `503` with
+`code: "browser-not-found"` when there is no Chrome or Edge to drive, and `500`
+when the browser failed (the details go to the terminal, not to the response).
 
 A filesystem failure is reported with what to do about it rather than as an
 opaque `500`: a full disk, a locked file, a permissions problem and a read-only
@@ -624,7 +630,8 @@ lib/
   skills-items.ts         Comma separated list <-> string[]
   overflow.ts             Page overflow measurement and message
   link-url.ts             Link label -> URL (the "Use label as URL" button)
-  pdf-export.ts           PDF request schema, file name, host guard
+  pdf-export.ts           PDF request schema, file name, print page URL
+  request-guards.ts       Local API guards: loopback Host, JSON body
   chrome-path.ts          Finds Chrome/Edge: CHROME_PATH, then install paths
   print-store.ts          In-memory, short-lived hand-off to the /print page
   pdf-render.ts           puppeteer-core: print a page to PDF (server only)

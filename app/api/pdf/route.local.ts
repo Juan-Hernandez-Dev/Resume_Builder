@@ -5,13 +5,13 @@ import { MAX_IMPORT_BYTES } from "@/lib/import-file";
 import {
   BROWSER_NOT_FOUND,
   contentDisposition,
-  isLoopbackHost,
   parsePdfRequest,
   pdfFileName,
   printPageUrl,
 } from "@/lib/pdf-export";
 import { renderPdf } from "@/lib/pdf-render";
 import { deletePrintJob, putPrintJob } from "@/lib/print-store";
+import { requireJsonBody, requireLoopbackHost } from "@/lib/request-guards";
 
 export const dynamic = "force-dynamic";
 
@@ -30,26 +30,19 @@ export const dynamic = "force-dynamic";
  * - The body must be sent as `application/json`. A cross-site page cannot do
  *   that without a CORS preflight, which this route never answers, so another
  *   tab cannot make the machine start Chrome.
- * - The `Host` header must be a loopback name (see `isLoopbackHost`), which
+ * - The `Host` header must be a loopback name (see lib/request-guards.ts), which
  *   turns away DNS-rebinding pages and other devices on the network. Chrome
  *   itself is always sent to the address this server is bound to, never to
  *   whatever `Host` claims.
  */
 export async function POST(request: NextRequest): Promise<Response> {
-  const type = request.headers.get("content-type") ?? "";
-  if (!type.toLowerCase().startsWith("application/json")) {
-    return NextResponse.json(
-      { error: "Request body must be sent as application/json." },
-      { status: 415 },
+  const refused =
+    requireJsonBody(request) ??
+    requireLoopbackHost(
+      request,
+      "PDF export only works when the app is opened on this machine.",
     );
-  }
-
-  if (!isLoopbackHost(request.headers.get("host"))) {
-    return NextResponse.json(
-      { error: "PDF export only works when the app is opened on this machine." },
-      { status: 403 },
-    );
-  }
+  if (refused) return refused;
 
   // Measured in bytes, the unit of the cap; a string's length counts UTF-16
   // code units, which undercounts anything outside ASCII.

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   contentDisposition,
-  isLoopbackHost,
   parsePdfRequest,
   pdfFileName,
   printPageUrl,
@@ -76,37 +75,6 @@ describe("parsePdfRequest", () => {
   it("rejects a body that is not an object", () => {
     expect(parsePdfRequest("resume").success).toBe(false);
     expect(parsePdfRequest(null).success).toBe(false);
-  });
-});
-
-describe("isLoopbackHost", () => {
-  it("accepts a Host header naming this machine, with or without a port", () => {
-    for (const host of [
-      "127.0.0.1",
-      "127.0.0.1:3000",
-      "127.0.1.1:3000",
-      "localhost:3000",
-      "LOCALHOST",
-      "[::1]:3000",
-      "[::1]",
-    ]) {
-      expect(isLoopbackHost(host)).toBe(true);
-    }
-  });
-
-  it("rejects anything else, including look-alikes and garbage", () => {
-    for (const host of [
-      "192.168.1.10:3000",
-      "example.com",
-      "localhost.example.com",
-      "127.0.0.1.example.com:3000",
-      "evil.example.com:3000",
-      "a b",
-      "",
-      null,
-    ]) {
-      expect(isLoopbackHost(host)).toBe(false);
-    }
   });
 });
 

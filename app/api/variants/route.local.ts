@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { describeFsError, fsErrorStatus } from "@/lib/fs-errors";
+import {
+  LOCAL_ONLY,
+  requireJsonBody,
+  requireLoopbackHost,
+} from "@/lib/request-guards";
 import { resumeSchema } from "@/lib/schema";
 import {
   InvalidVariantDataError,
@@ -26,8 +31,16 @@ const createRequestSchema = z.object({
   resume: resumeSchema,
 });
 
-/** GET /api/variants -> the names of every variant file under /data. */
-export async function GET(): Promise<NextResponse> {
+/**
+ * GET /api/variants -> the names of every variant file under /data.
+ *
+ * Like every variant route, it only answers a request addressed to this
+ * machine (see lib/request-guards.ts), and a body must be sent as JSON.
+ */
+export async function GET(request: Request): Promise<NextResponse> {
+  const refused = requireLoopbackHost(request, LOCAL_ONLY);
+  if (refused) return refused;
+
   try {
     return NextResponse.json({ variants: await listVariants() });
   } catch (error) {
@@ -46,6 +59,10 @@ export async function GET(): Promise<NextResponse> {
  * existing variant is never replaced.
  */
 export async function POST(request: Request): Promise<NextResponse> {
+  const refused =
+    requireJsonBody(request) ?? requireLoopbackHost(request, LOCAL_ONLY);
+  if (refused) return refused;
+
   let body: unknown;
   try {
     body = await request.json();

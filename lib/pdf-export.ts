@@ -61,31 +61,6 @@ export function contentDisposition(fileName: string): string {
 }
 
 /**
- * Whether a request's `Host` header (port optional) names this machine.
- *
- * The route launches a browser, so it only answers requests addressed to a
- * loopback name. That turns away a page on another site that rebinds its own
- * DNS name to 127.0.0.1 in order to call this API as if it were same-origin,
- * and a request from another device when the server is bound to every
- * interface. Garbage that does not parse as a host is refused too.
- */
-export function isLoopbackHost(hostHeader: string | null): boolean {
-  if (!hostHeader) return false;
-
-  let hostname: string;
-  try {
-    hostname = new URL(`http://${hostHeader}`).hostname;
-  } catch {
-    return false;
-  }
-  return (
-    hostname === "localhost" ||
-    hostname === "[::1]" ||
-    /^127(\.\d{1,3}){3}$/.test(hostname)
-  );
-}
-
-/**
  * Where headless Chrome loads the document from: `/print` on this server.
  *
  * `origin` is the request URL as Next.js builds it, from the address the

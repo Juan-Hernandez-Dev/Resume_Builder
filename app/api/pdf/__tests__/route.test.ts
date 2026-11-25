@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resolveChrome } from "@/lib/chrome-path";
 import { MAX_IMPORT_BYTES } from "@/lib/import-file";
-import { BROWSER_NOT_FOUND, isLoopbackHost } from "@/lib/pdf-export";
+import { BROWSER_NOT_FOUND } from "@/lib/pdf-export";
 import { renderPdf } from "@/lib/pdf-render";
 import { getPrintJob } from "@/lib/print-store";
+import { isLoopbackHost } from "@/lib/request-guards";
 import { emptyResume, type Resume } from "@/lib/schema";
 
 import { POST } from "../route.local";

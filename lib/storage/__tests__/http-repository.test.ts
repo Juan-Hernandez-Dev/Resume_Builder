@@ -80,6 +80,8 @@ describe("requests", () => {
     const { url, init } = lastCall();
     expect(url).toBe("/api/variants");
     expect(init.method).toBe("POST");
+    // The route answers 415 to anything else (see lib/request-guards.ts).
+    expect(new Headers(init.headers).get("content-type")).toBe("application/json");
     expect(JSON.parse(String(init.body))).toEqual({
       to: "example",
       resume: seedResume(),
@@ -93,6 +95,7 @@ describe("requests", () => {
     const { url, init } = lastCall();
     expect(url).toBe("/api/variants");
     expect(init.method).toBe("POST");
+    expect(new Headers(init.headers).get("content-type")).toBe("application/json");
     expect(JSON.parse(String(init.body))).toEqual({ from: "default", to: "copy" });
   });
 
