@@ -219,18 +219,33 @@ npx serve out
 
 Deploy on Vercel by importing the repository with these project settings:
 
-| Setting              | Value                                              |
-| -------------------- | -------------------------------------------------- |
-| Framework preset     | Next.js                                            |
-| Environment variable | `NEXT_PUBLIC_APP_MODE=web`, for Production and Preview |
-| Node.js version      | 24.x                                               |
-| Build command        | `npm run build:web` (also set in `vercel.json`)     |
-| Output directory     | `out`, only if Vercel does not detect it           |
+| Setting              | Value                                                        |
+| -------------------- | ------------------------------------------------------------ |
+| Framework preset     | Next.js                                                      |
+| Build command        | `npm run build:web`, already set by `vercel.json`            |
+| Node.js version      | 24.x                                                         |
+| Environment variable | Optional: `NEXT_PUBLIC_APP_MODE=web`, Production and Preview |
+| Output directory     | `out`, only if Vercel does not detect it                     |
+
+The build command is what makes it the web build: `vercel.json` sets it to
+`npm run build:web`, and that script sets `NEXT_PUBLIC_APP_MODE=web` itself
+before running `next build`. The environment variable is therefore optional,
+belt and braces: it only matters if the build command is ever overridden in
+the project settings with a plain `next build`, which would otherwise build
+the local app. Node 24.x matches `.nvmrc` and satisfies the `engines` range in
+`package.json` (`>=22.12.0`).
 
 `vercel.json` also sets the security headers for every route: a
-Content-Security-Policy that allows nothing but this origin (fonts are
-self-hosted by `next/font`, so `font-src 'self'` is enough), no referrer,
-`nosniff`, no camera, microphone or location, and HSTS.
+Content-Security-Policy that restricts scripts, styles, fonts, images and
+requests to this origin (plus `blob:` and `data:` images; fonts are
+self-hosted by `next/font`, so `font-src 'self'` is enough) but permits inline
+scripts and styles, which Next's static export needs to hydrate the page; no
+referrer, `nosniff`, no
+camera, microphone or location, and HSTS.
+
+Known limitations: the same variant open in two tabs is last-write-wins; each
+tab autosaves its own copy, and the later save replaces the earlier one
+without warning.
 
 ## Using the editor
 

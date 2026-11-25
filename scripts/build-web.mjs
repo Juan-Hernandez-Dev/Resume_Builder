@@ -4,7 +4,7 @@
  *
  * A script rather than `NEXT_PUBLIC_APP_MODE=web next build` in package.json,
  * because npm runs scripts through cmd.exe on Windows, where that syntax does
- * not exist. On Vercel the variable is also set in the project settings; this
+ * not exist. The variable may also be set in the Vercel project settings; this
  * sets it either way, so the command alone always produces the web build.
  */
 import { spawnSync } from "node:child_process";
