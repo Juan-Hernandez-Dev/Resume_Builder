@@ -1,13 +1,12 @@
-import { resumeSchema, type Resume } from "../schema";
+import type { Resume } from "../schema";
 import { assertValidVariantName } from "../variant-name";
 
 import {
-  InvalidVariantDataError,
   VariantExistsError,
   VariantNotFoundError,
-  flattenIssues,
 } from "./errors";
 import type { ResumeRepository } from "./port";
+import { validatedResume } from "./validate";
 
 /**
  * Variants in a Map, gone when the page closes. Used by tests, and by the web
@@ -29,11 +28,11 @@ export function createMemoryRepository(
 
   function load(name: string): Resume {
     if (!store.has(name)) throw new VariantNotFoundError(name);
-    return validated(name, store.get(name));
+    return validatedResume(name, structuredClone(store.get(name)));
   }
 
   function save(name: string, resume: Resume): Resume {
-    const parsed = validated(name, resume);
+    const parsed = validatedResume(name, structuredClone(resume));
     store.set(name, structuredClone(parsed));
     return parsed;
   }
@@ -69,11 +68,3 @@ export function createMemoryRepository(
   };
 }
 
-/** A fresh, schema-checked copy: zod builds new objects as it parses. */
-function validated(name: string, value: unknown): Resume {
-  const result = resumeSchema.safeParse(structuredClone(value));
-  if (!result.success) {
-    throw new InvalidVariantDataError(name, flattenIssues(result.error.issues));
-  }
-  return result.data;
-}

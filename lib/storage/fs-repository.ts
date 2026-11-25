@@ -1,7 +1,6 @@
 import "server-only";
 
 import { describeFsError, fsErrorStatus } from "../fs-errors";
-import { resumeSchema, type Resume } from "../schema";
 import {
   createVariant,
   duplicateVariant,
@@ -12,13 +11,12 @@ import {
 } from "../variants";
 
 import {
-  InvalidVariantDataError,
   StorageError,
   VariantNotFoundError,
-  flattenIssues,
   isRepositoryError,
 } from "./errors";
 import type { ResumeRepository } from "./port";
+import { validatedResume } from "./validate";
 
 /**
  * The files under data/ as a repository: lib/variants.ts behind the port, for
@@ -36,7 +34,7 @@ export const fsRepository: ResumeRepository = {
 
   write: (name, resume) =>
     guard(async () => {
-      const parsed = validated(name, resume);
+      const parsed = validatedResume(name, resume);
       // `writeVariant` creates the file if needed; the port never does.
       if (!(await variantExists(name))) throw new VariantNotFoundError(name);
       return writeVariant(name, parsed);
@@ -44,7 +42,7 @@ export const fsRepository: ResumeRepository = {
 
   create: (name, resume) =>
     guard(
-      async () => createVariant(name, validated(name, resume)),
+      async () => createVariant(name, validatedResume(name, resume)),
       `Could not create "${name}"`,
     ),
 
@@ -64,10 +62,3 @@ async function guard<T>(run: () => Promise<T>, description: string): Promise<T> 
   }
 }
 
-function validated(name: string, resume: Resume): Resume {
-  const result = resumeSchema.safeParse(resume);
-  if (!result.success) {
-    throw new InvalidVariantDataError(name, flattenIssues(result.error.issues));
-  }
-  return result.data;
-}

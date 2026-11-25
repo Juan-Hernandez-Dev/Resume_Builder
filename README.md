@@ -612,6 +612,7 @@ lib/
   storage/                Where variants live, behind one interface
     port.ts               ResumeRepository: list, read, write, create, duplicate
     errors.ts             Not found, exists, invalid data, storage failure
+    validate.ts           The schema check every adapter runs on a document
     bootstrap.ts          Start-up use cases: seed a first variant, open one
     fs-repository.ts      data/ files through lib/variants.ts (server only)
     http-repository.ts    The /api/variants routes, from the browser

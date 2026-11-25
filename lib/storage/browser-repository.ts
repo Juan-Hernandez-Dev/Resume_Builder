@@ -1,15 +1,14 @@
-import { resumeSchema, type Resume } from "../schema";
+import type { Resume } from "../schema";
 import { assertValidVariantName, isValidVariantName } from "../variant-name";
 
 import {
-  InvalidVariantDataError,
   StorageError,
   VariantExistsError,
   VariantNotFoundError,
-  flattenIssues,
   isRepositoryError,
 } from "./errors";
 import type { ResumeRepository } from "./port";
+import { validatedResume } from "./validate";
 
 /**
  * Variants in this browser's IndexedDB: the storage of the web build, where
@@ -180,7 +179,7 @@ export function createBrowserRepository({
         let resume: Resume | null = null;
         get(store, name, fail, (record) => {
           if (record === undefined) return fail(new VariantNotFoundError(name));
-          resume = validated(name, record.resume);
+          resume = validatedResume(name, record.resume);
         });
         return () => resume as Resume;
       });
@@ -188,7 +187,7 @@ export function createBrowserRepository({
 
     async write(name, resume) {
       assertValidVariantName(name);
-      const parsed = validated(name, resume);
+      const parsed = validatedResume(name, resume);
       const written = await transact("readwrite", (store, fail) => {
         get(store, name, fail, (record) => {
           if (record === undefined) return fail(new VariantNotFoundError(name));
@@ -210,7 +209,7 @@ export function createBrowserRepository({
 
     async create(name, resume) {
       assertValidVariantName(name);
-      const parsed = validated(name, resume);
+      const parsed = validatedResume(name, resume);
       return transact(
         "readwrite",
         (store) => {
@@ -232,7 +231,7 @@ export function createBrowserRepository({
             if (record === undefined) {
               return fail(new VariantNotFoundError(from));
             }
-            copy = validated(from, record.resume);
+            copy = validatedResume(from, record.resume);
             store.add(toRecord(to, copy));
           });
           return () => structuredClone(copy as Resume);
@@ -274,14 +273,6 @@ function openDatabase(
 
 function toRecord(name: string, resume: Resume): VariantRecord {
   return { name, resume, updatedAt: Date.now() };
-}
-
-function validated(name: string, value: unknown): Resume {
-  const result = resumeSchema.safeParse(value);
-  if (!result.success) {
-    throw new InvalidVariantDataError(name, flattenIssues(result.error.issues));
-  }
-  return result.data;
 }
 
 function unavailable(cause: unknown): StorageError {
