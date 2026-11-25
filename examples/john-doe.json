@@ -4,11 +4,11 @@
     "location": "Austin, TX",
     "links": [
       {
-        "label": "LinkedIn",
+        "label": "linkedin.com/in/johndoe",
         "url": "https://www.linkedin.com/in/johndoe"
       },
       {
-        "label": "GitHub",
+        "label": "github.com/johndoe",
         "url": "https://github.com/johndoe"
       }
     ],
